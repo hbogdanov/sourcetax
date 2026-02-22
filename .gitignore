@@ -1,20 +1,26 @@
+# Python packaging
 __pycache__/
-.env
-venv/
 *.pyc
-.idea/
-.vscode/
+*.egg-info/
 dist/
 build/
-*.egg-info/
 
-# Data files (use tools/fetch_public_datasets.py to download)
+# Environment
+.env
+venv/
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
+
+# Data + outputs
 data/store.db
-data/forms/funsd/
-data/forms/funsd/**/*.png
-data/forms/funsd/**/*.json
+data/forms/
+data/samples/
+data/combined_dataset/
+outputs/
 tmp/
-outputs/*.csv
 
 # Large dataset artifacts (generated, not source)
 *.parquet
