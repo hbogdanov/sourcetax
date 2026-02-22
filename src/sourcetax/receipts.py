@@ -11,38 +11,54 @@ import hashlib
 
 try:
     import pytesseract
-    from PIL import Image
+    from PIL import Image, ImageOps, ImageEnhance
     HAS_TESSERACT = True
 except ImportError:
     HAS_TESSERACT = False
 
-try:
-    import easyocr
-    HAS_EASYOCR = False  # lazy init
-except ImportError:
-    HAS_EASYOCR = False
+# EasyOCR is optional and must be imported lazily inside the function
+HAS_EASYOCR = False
 
 
 def ocr_image_tesseract(image_path: Path) -> str:
-    """Extract text from image using Tesseract. Requires: pip install pytesseract pillow + system tesseract."""
+    """Extract text from image using Tesseract.
+
+    Applies lightweight preprocessing (grayscale, contrast) for more stable OCR.
+    Requires: pip install pytesseract pillow + system tesseract.
+    """
     if not HAS_TESSERACT:
         raise ImportError("pytesseract/pillow not installed. Run: pip install pytesseract pillow")
-    
+
     img = Image.open(image_path)
+    # Preprocess: convert to grayscale, autocontrast, enhance
+    img = ImageOps.grayscale(img)
+    img = ImageOps.autocontrast(img)
+    try:
+        enhancer = ImageEnhance.Contrast(img)
+        img = enhancer.enhance(1.2)
+    except Exception:
+        pass
+
     text = pytesseract.image_to_string(img)
     return text
 
 
 def ocr_image_easyocr(image_path: Path) -> str:
-    """Extract text from image using EasyOCR. Requires: pip install easyocr"""
-    global HAS_EASYOCR
-    if not HAS_EASYOCR:
-        try:
-            import easyocr
-            HAS_EASYOCR = True
-        except ImportError:
-            raise ImportError("easyocr not installed. Run: pip install easyocr")
-    
+    """Extract text from image using EasyOCR (lazy import).
+
+    EasyOCR/torch can be heavy; importing only when requested avoids import-time failures.
+    """
+    try:
+        import easyocr  # type: ignore
+        from PIL import Image, ImageOps
+    except Exception as e:
+        raise ImportError("easyocr not available. Install optional extras: pip install -e .[ocr] or pip install easyocr") from e
+
+    # Preprocess image similarly
+    img = Image.open(image_path)
+    img = ImageOps.grayscale(img)
+    img = ImageOps.autocontrast(img)
+
     reader = easyocr.Reader(['en'])
     result = reader.readtext(str(image_path))
     text = '\n'.join([item[1] for item in result])

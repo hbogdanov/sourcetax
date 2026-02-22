@@ -12,16 +12,25 @@ import difflib
 
 
 def normalize_merchant(merchant: str) -> str:
-    """Normalize merchant name for fuzzy matching."""
+    """Normalize merchant name for fuzzy matching.
+
+    Delegates to `merchant_normalizer` when available to ensure consistent
+    normalization across the codebase.
+    """
     if not merchant:
         return ""
-    # Lowercase, strip punctuation & numbers
-    normalized = merchant.lower()
-    for char in ".,;:'\"!@#$%^&*()[]{}":
-        normalized = normalized.replace(char, "")
-    # Remove numbers
-    normalized = "".join(c for c in normalized if not c.isdigit())
-    return " ".join(normalized.split())
+    try:
+        from sourcetax.models import merchant_normalizer
+
+        clean, _, _ = merchant_normalizer.normalize_merchant(merchant)
+        return clean.lower()
+    except Exception:
+        # Fallback: simple lightweight normalization
+        normalized = merchant.lower()
+        for char in ".,;:'\"!@#$%^&*()[]{}":
+            normalized = normalized.replace(char, "")
+        normalized = "".join(c for c in normalized if not c.isdigit())
+        return " ".join(normalized.split())
 
 
 def date_closeness_score(date1: str, date2: str, max_days: int = 3) -> float:

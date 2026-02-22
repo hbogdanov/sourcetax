@@ -4,6 +4,7 @@ from pathlib import Path
 from .schema import CanonicalRecord
 from . import storage
 from . import receipts
+from sourcetax.models import merchant_normalizer
 import datetime
 
 
@@ -18,7 +19,11 @@ def normalize_to_canonical(row: Dict[str, str], source: str) -> Dict:
     def norm_merchant(s: str) -> str:
         if not s:
             return ""
-        return s.lower().replace(",", "").replace(".", "").replace("  ", " ").strip()
+        try:
+            clean, _, _ = merchant_normalizer.normalize_merchant(s)
+            return clean.lower()
+        except Exception:
+            return s.lower().replace(",", "").replace(".", "").replace("  ", " ").strip()
 
     merchant_raw = None
     if source == "toast":
