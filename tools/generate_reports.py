@@ -28,10 +28,23 @@ def generate():
         out_path="outputs/quickbooks_import.csv", db_path="data/store.db"
     )
     print("QuickBooks CSV:", qb)
+    
     print("Computing Schedule C totals...")
     totals, counts = exporter.compute_schedule_c_totals(db_path="data/store.db")
     sc = exporter.write_schedule_c_csv(totals, count_by_category=counts, out_path="outputs/schedule_c_totals.csv")
     print("Schedule C totals:", sc)
+    
+    print("Exporting audit pack...")
+    audit = exporter.export_audit_pack(db_path="data/store.db")
+    print("Audit pack:", audit)
+    
+    print("\nExport Metrics:")
+    metrics = exporter.export_metrics(db_path="data/store.db")
+    print(f"  Total records: {metrics['total_records']}")
+    print(f"  Total expenses: {metrics['total_expenses']} (${metrics['total_amount']:.2f})")
+    print(f"  Receipts: {metrics['total_receipts']} (matched: {metrics['matched_receipts']}, unmatched: {metrics['unmatched_receipts']})")
+    print(f"  Match rate: {metrics['match_rate']:.1%}")
+    print(f"  Needs review: {metrics['needs_review']}")
 
 
 if __name__ == "__main__":

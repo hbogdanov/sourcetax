@@ -2,6 +2,7 @@ import sqlite3
 from pathlib import Path
 import csv
 import json
+from datetime import datetime
 from .taxonomy import load_merchant_map
 
 
@@ -98,3 +99,103 @@ def write_schedule_c_csv(
             count = count_by_category.get(category, 0)
             writer.writerow([category, f"{amt:.2f}", count])
     return str(outp)
+
+
+def export_audit_pack(db_path: str = "data/store.db", out_path: str = "outputs/audit_pack.csv"):
+    """
+    Export audit pack: all transactions with category, match status, confidence.
+    
+    Columns: date, merchant, amount, direction, category, match_id, match_score, confidence, source
+    """
+    outp = Path(out_path)
+    outp.parent.mkdir(parents=True, exist_ok=True)
+    
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT 
+            transaction_date, merchant_raw, amount, direction, 
+            category_final, category_pred, matched_transaction_id, match_score, 
+            confidence, source
+        FROM canonical_records
+        ORDER BY transaction_date DESC
+    """)
+    
+    with outp.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.writer(fh)
+        writer.writerow([
+            "Date", "Merchant", "Amount", "Direction", 
+            "Category (User)", "Category (Predicted)", 
+            "Matched Transaction ID", "Match Score", "Confidence", "Source"
+        ])
+        
+        for row in cur.fetchall():
+            category = row["category_final"] or row["category_pred"] or "Uncategorized"
+            writer.writerow([
+                row["transaction_date"],
+                row["merchant_raw"],
+                f"{row['amount']:.2f}" if row["amount"] else "",
+                row["direction"],
+                row["category_final"] or "",
+                row["category_pred"] or "",
+                row["matched_transaction_id"] or "",
+                f"{row['match_score']:.2%}" if row["match_score"] else "",
+                f"{row['confidence']:.1%}" if row["confidence"] else "",
+                row["source"],
+            ])
+    
+    conn.close()
+    return str(outp)
+
+
+def export_metrics(db_path: str = "data/store.db") -> dict:
+    """Calculate and return audit metrics."""
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    
+    # Total records
+    cur.execute("SELECT COUNT(*) FROM canonical_records")
+    total_records = cur.fetchone()[0]
+    
+    # Receipts
+    cur.execute("SELECT COUNT(*) FROM canonical_records WHERE source = 'receipt'")
+    total_receipts = cur.fetchone()[0]
+    
+    # Matched receipts
+    cur.execute(
+        "SELECT COUNT(*) FROM canonical_records WHERE source = 'receipt' AND matched_transaction_id IS NOT NULL"
+    )
+    matched_receipts = cur.fetchone()[0]
+    
+    # Records needing review (low confidence and no final category)
+    cur.execute(
+        "SELECT COUNT(*) FROM canonical_records WHERE confidence < 0.7 AND category_final IS NULL"
+    )
+    needs_review = cur.fetchone()[0]
+    
+    # Expenses only
+    cur.execute(
+        "SELECT COUNT(*) FROM canonical_records WHERE direction = 'expense'"
+    )
+    total_expenses = cur.fetchone()[0]
+    
+    cur.execute(
+        "SELECT SUM(amount) FROM canonical_records WHERE direction = 'expense'"
+    )
+    total_amount_result = cur.fetchone()[0]
+    total_amount = float(total_amount_result) if total_amount_result else 0.0
+    
+    conn.close()
+    
+    return {
+        "total_records": total_records,
+        "total_receipts": total_receipts,
+        "matched_receipts": matched_receipts,
+        "unmatched_receipts": total_receipts - matched_receipts,
+        "needs_review": needs_review,
+        "total_expenses": total_expenses,
+        "total_amount": total_amount,
+        "match_rate": matched_receipts / total_receipts if total_receipts > 0 else 0.0,
+    }
