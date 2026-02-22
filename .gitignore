@@ -17,7 +17,6 @@ venv/
 # Data + outputs
 data/store.db
 data/forms/
-data/samples/
 data/combined_dataset/
 outputs/
 tmp/

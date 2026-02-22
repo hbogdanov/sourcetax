@@ -5,16 +5,14 @@ description = "SourceTax - transaction classification and receipt linking for ta
 authors = [{name = "SourceTax Contributors"}]
 requires-python = ">=3.9"
 dependencies = [
-    "fastapi>=0.95.0",
-    "python-multipart>=0.0.5",
     "Pillow>=9.0.0",
     "pytesseract>=0.3.0",
     "streamlit>=1.28.0",
-    "difflib-python>=1.0.0",
+    "easyocr>=1.6.0",
 ]
 
 [project.optional-dependencies]
-ocr-easyocr = ["easyocr>=1.6.0"]
+matching = ["rapidfuzz>=2.0.0"]
 dev = [
     "pytest>=7.0",
     "black>=23.0",
