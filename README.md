@@ -4,6 +4,29 @@ An AI-driven pipeline that ingests transaction data from banks, POS systems, and
 
 ## Quick Start
 
+### Prerequisites
+
+**Tesseract OCR** (for receipt image extraction)
+
+This project uses `pytesseract`, which requires the [Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) binary to be installed:
+
+**Windows:**  
+Download and install from [Tesseract releases](https://github.com/UB-Mannheim/tesseract/releases). Default path: `C:\Program Files\Tesseract-OCR`. After install, set in your Python code or environment:
+```python
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+```
+
+**macOS:**  
+```bash
+brew install tesseract
+```
+
+**Linux (Ubuntu/Debian):**  
+```bash
+sudo apt-get install tesseract-ocr
+```
+
 ### Installation
 
 ```bash
@@ -11,12 +34,14 @@ An AI-driven pipeline that ingests transaction data from banks, POS systems, and
 git clone <repo>
 cd sourcetax
 
-# Option 1: Install from pyproject.toml (recommended)
+# Install with core dependencies
 pip install -e .
-pip install -e ".[dev]"  # for development tools (black, ruff, pytest)
 
-# Option 2: Install from requirements.txt
-pip install -r requirements.txt
+# For development
+pip install -e ".[dev]"
+
+# For enhanced matching (optional, recommended)
+pip install -e ".[matching]"
 ```
 
 ### Run Demo
@@ -208,6 +233,18 @@ exporter.compute_schedule_c_totals(records)
 - `matched_transaction_id`, `match_score`, `evidence_keys`
 - `raw_payload` (dict)
 
+**Schema Invariants (locked for Phase 3 ML):**
+- **Direction:** Always "expense" (amount positive) or "income" (amount negative). Sign is implicit in direction, not amount.
+- **Merchant normalization:** Use `normalize_merchant(text)` consistently. Examples: "STARBUCKS COFFEE 123" → "Starbucks", "UBER TRIP" → "Uber".
+- **Category coding:** Always populate `category_code` (stable: 'meals', 'travel', 'office', etc.) alongside `category_name` (human-readable: 'Meals and Lodging'). This ensures ML models can use both.
+- **Amounts:** Always store with one convention (expenses positive). Direction field disambiguates, not the sign.
+- **Dates:** ISO 8601 format (YYYY-MM-DD). No timezones. OCR extracts best guess; gold set has ground truth.
+- **Confidence:** Float 0.0–1.0. Metrics:
+  - For rules-based categorization: 0.9–1.0 (confident)
+  - For fuzzy matches: score of best match (0.0–1.0)
+  - For ML predictions: probability of predicted class
+- **Match score:** 0.0–1.0 if matched_transaction_id is set. Otherwise null.
+
 **`src/sourcetax/ingest.py`**  
 Key functions:
 - `read_csv(path, source) → Iterator[dict]` — Read CSV, yield records
@@ -280,16 +317,41 @@ sourcetax/
 └── README.md               # This file
 ```
 
+## Evaluation
+
+A gold standard dataset is included in `data/gold/gold_transactions.jsonl` (~10 hand-labeled canonical records) for evaluation:
+
+```bash
+# Run evaluation on current pipeline
+python tools/eval.py
+
+# Output: Categorization accuracy, matching precision/recall, OCR extraction accuracy
+```
+
+**Gold Dataset:**
+- ~10 curated transactions covering major sources (bank, receipt, Toast, QuickBooks)
+- Hand-labeled `category_final` (ground truth)
+- Receipt↔bank links for matching evaluation
+- OCR extraction ground truth (merchant, date, amount)
+
+**Metrics Tracked:**
+- **Categorization Accuracy:** Rules engine + overrides vs. ground truth
+- **Matching Precision/Recall:** Receipt→bank matching performance
+- **Extraction Accuracy:** Merchant, date, amount OCR correctness
+
+Before Phase 3 ML work, expand gold dataset to ~200 records using `app_review.py` (mark good matches, override categories, save). This becomes your evaluation set.
+
 ## Roadmap
 
 ### Phase 3 — ML Categorization Baseline
 
-**Planned:** Train a small supervised classifier on Phase 2 data as baseline for future improvements.
+**Status:** Foundation locked. Gold dataset + eval script ready.
 
-- Evaluate learned/keyword rules on gold set (200 hand-labeled records)
-- Simple baseline: TF-IDF + logistic regression on merchant name + description
-- Confusion matrix, precision/recall by Schedule C category
-- Compare: rules vs. ML vs. ensemble
+**Work:**
+- Expand gold set to 200 records using review UI
+- Train TF-IDF + logistic regression baseline on golden labels
+- Evaluate: confusion matrix, precision/recall by Schedule C category
+- Compare: rules-only vs. ML vs. ensemble
 
 ### Phase 4 — Advanced Exports & Reconciliation
 
