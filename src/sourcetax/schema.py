@@ -12,6 +12,9 @@ class CanonicalRecord:
     currency: Optional[str]
     payment_method: Optional[str]
     source: Optional[str]
+    direction: Optional[str]  # 'income' or 'expense' (normalized from sign/type)
+    category_code: Optional[str]  # Schedule C code (e.g., '8a', '27') once categorized
+    source_record_id: Optional[str]  # trace back to original source (order_id, tx_id, etc.)
     raw_payload: Optional[Dict[str, Any]]
     confidence: Optional[Dict[str, float]]
     tags: Optional[List[str]]
@@ -25,6 +28,9 @@ class CanonicalRecord:
             'currency': self.currency,
             'payment_method': self.payment_method,
             'source': self.source,
+            'direction': self.direction,
+            'category_code': self.category_code,
+            'source_record_id': self.source_record_id,
             'raw_payload': json.dumps(self.raw_payload or {}),
             'confidence': json.dumps(self.confidence or {}),
             'tags': json.dumps(self.tags or [])
@@ -40,6 +46,9 @@ class CanonicalRecord:
             currency=d.get('currency'),
             payment_method=d.get('payment_method'),
             source=d.get('source'),
+            direction=d.get('direction'),
+            category_code=d.get('category_code'),
+            source_record_id=d.get('source_record_id'),
             raw_payload=d.get('raw_payload'),
             confidence=d.get('confidence'),
             tags=d.get('tags')

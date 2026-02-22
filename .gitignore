@@ -6,3 +6,18 @@ venv/
 .vscode/
 dist/
 build/
+*.egg-info/
+
+# Data files (use tools/fetch_public_datasets.py to download)
+data/store.db
+data/forms/funsd/
+data/forms/funsd/**/*.png
+data/forms/funsd/**/*.json
+tmp/
+outputs/*.csv
+
+# Large dataset artifacts (generated, not source)
+*.parquet
+*.pickle
+.cache/
+.huggingface/

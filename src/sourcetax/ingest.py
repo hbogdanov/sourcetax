@@ -8,7 +8,7 @@ import datetime
 
 def normalize_to_canonical(row: Dict[str, str], source: str) -> Dict:
     """Normalize known source row to canonical schema.
-    Supported sources: 'toast', 'bank'
+    Supported sources: 'toast', 'bank', 'quickbooks'
     Returns a dict suitable for `CanonicalRecord.from_normalized`.
     """
     out = {
@@ -19,6 +19,9 @@ def normalize_to_canonical(row: Dict[str, str], source: str) -> Dict:
         'currency': 'USD',
         'payment_method': None,
         'source': source,
+        'direction': None,  # 'income' or 'expense'
+        'category_code': None,
+        'source_record_id': None,
         'raw_payload': dict(row),
         'confidence': {'merchant': 0.9, 'date': 0.9, 'amount': 0.9},
         'tags': []
@@ -28,13 +31,29 @@ def normalize_to_canonical(row: Dict[str, str], source: str) -> Dict:
         out['id'] = row.get('order_id')
         out['merchant_name'] = row.get('location')
         out['transaction_date'] = row.get('date')
-        out['amount'] = parse_num(row.get('total'))
+        out['amount'] = abs(parse_num(row.get('total')) or 0)
         out['payment_method'] = row.get('payment_type')
+        out['source_record_id'] = row.get('order_id')
+        # Toast: positive amounts are sales/income
+        amount_val = parse_num(row.get('total'))
+        out['direction'] = 'income' if (amount_val or 0) >= 0 else 'expense'
     elif source == 'bank':
         out['merchant_name'] = row.get('description')
         out['transaction_date'] = row.get('date')
-        out['amount'] = parse_num(row.get('amount'))
+        amount_val = parse_num(row.get('amount'))
+        out['amount'] = abs(amount_val) if amount_val else None
         out['payment_method'] = row.get('transaction_type')
+        # Bank: negative = expense, positive = income
+        out['direction'] = 'expense' if (amount_val or 0) < 0 else 'income'
+    elif source == 'quickbooks':
+        out['merchant_name'] = row.get('Payee') or row.get('Description')
+        out['transaction_date'] = row.get('Date')
+        amount_val = parse_num(row.get('Amount'))
+        out['amount'] = abs(amount_val) if amount_val else None
+        out['payment_method'] = row.get('Account')
+        out['source_record_id'] = row.get('Transaction ID') or row.get('Payee')
+        # QuickBooks: negative = expense, positive = income
+        out['direction'] = 'expense' if (amount_val or 0) < 0 else 'income'
     else:
         out['raw_payload'] = row
 

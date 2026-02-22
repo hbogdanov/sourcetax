@@ -1,18 +1,27 @@
-"""Ingest sample data (if not already) and generate QuickBooks CSV + Schedule C totals."""
+"""Ingest sample data (fresh start) and generate QuickBooks CSV + Schedule C totals."""
 from pathlib import Path
 from sourcetax.ingest import ingest_and_store
 from sourcetax import exporter
 
 
 def ensure_data():
-    # ingest sample toast and bank if DB empty-ish
-    n = ingest_and_store('data/samples/toast_sample.csv', 'toast', db_path='data/store.db')
+    """Ingest sample data from multiple sources into a fresh DB."""
+    db_path = Path('data/store.db')
+    # Start fresh: delete existing DB for deterministic runs
+    if db_path.exists():
+        db_path.unlink()
+    
+    # Ingest samples in order
+    n = ingest_and_store('data/samples/toast_sample.csv', 'toast', db_path=str(db_path))
     print('Ingested toast:', n)
-    n = ingest_and_store('data/samples/bank_sample.csv', 'bank', db_path='data/store.db')
+    n = ingest_and_store('data/samples/bank_sample.csv', 'bank', db_path=str(db_path))
     print('Ingested bank:', n)
+    n = ingest_and_store('data/samples/quickbooks_sample.csv', 'quickbooks', db_path=str(db_path))
+    print('Ingested quickbooks:', n)
 
 
 def generate():
+    """Generate exports from canonical DB."""
     print('Generating QuickBooks CSV...')
     qb = exporter.generate_quickbooks_csv(out_path='outputs/quickbooks_import.csv', db_path='data/store.db')
     print('QuickBooks CSV:', qb)

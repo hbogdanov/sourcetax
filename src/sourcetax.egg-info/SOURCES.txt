@@ -2,8 +2,14 @@ README.md
 pyproject.toml
 src/sourcetax/app.py
 src/sourcetax/core.py
+src/sourcetax/exporter.py
+src/sourcetax/ingest.py
+src/sourcetax/schema.py
+src/sourcetax/storage.py
+src/sourcetax/taxonomy.py
 src/sourcetax.egg-info/PKG-INFO
 src/sourcetax.egg-info/SOURCES.txt
 src/sourcetax.egg-info/dependency_links.txt
+src/sourcetax.egg-info/requires.txt
 src/sourcetax.egg-info/top_level.txt
 tests/test_core.py

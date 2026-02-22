@@ -20,6 +20,9 @@ def ensure_db(path: Path = DB_PATH):
         currency TEXT,
         payment_method TEXT,
         source TEXT,
+        direction TEXT,
+        category_code TEXT,
+        source_record_id TEXT,
         raw_payload TEXT,
         confidence TEXT,
         tags TEXT
@@ -34,7 +37,7 @@ def insert_record(rec: Dict[str, Any], path: Path = DB_PATH):
     conn = sqlite3.connect(str(path))
     cur = conn.cursor()
     cur.execute(
-        'INSERT INTO canonical_records (id, merchant_name, transaction_date, amount, currency, payment_method, source, raw_payload, confidence, tags) VALUES (?,?,?,?,?,?,?,?,?,?)',
+        'INSERT INTO canonical_records (id, merchant_name, transaction_date, amount, currency, payment_method, source, direction, category_code, source_record_id, raw_payload, confidence, tags) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
         (
             rec.get('id'),
             rec.get('merchant_name'),
@@ -43,6 +46,9 @@ def insert_record(rec: Dict[str, Any], path: Path = DB_PATH):
             rec.get('currency'),
             rec.get('payment_method'),
             rec.get('source'),
+            rec.get('direction'),
+            rec.get('category_code'),
+            rec.get('source_record_id'),
             json.dumps(rec.get('raw_payload') or {}),
             json.dumps(rec.get('confidence') or {}),
             json.dumps(rec.get('tags') or [])

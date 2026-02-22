@@ -2,7 +2,32 @@
 name = "sourcetax"
 version = "0.1.0"
 description = "SourceTax - transaction classification and extraction platform"
+authors = [{name = "SourceTax Contributors"}]
 requires-python = ">=3.9"
+dependencies = [
+    "fastapi>=0.95.0",
+    "python-multipart>=0.0.5",
+    "datasets>=2.0.0",
+    "huggingface-hub>=0.15.0",
+    "Pillow>=9.0.0",
+]
 
-[tool.poetry.dev-dependencies]
-pytest = "^7.0"
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+]
+
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311']
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+select = ["E", "F", "W"]
