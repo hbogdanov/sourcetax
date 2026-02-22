@@ -1,0 +1,4 @@
+date,description,amount,transaction_type,balance
+2026-02-19,ACME SUPPLY CO,-125.00,debit,9875.00
+2026-02-20,COFFEE SHOP,4.50,credit,9879.50
+2026-02-21,ACH PAYMENT,-500.00,debit,9379.50

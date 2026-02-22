@@ -1,0 +1,9 @@
+ACME SUPPLY CO
+456 Supply Rd
+02/19/2026
+Invoice: 9876
+Boxes 5 x $25.00
+Subtotal: $125.00
+Tax: $0.00
+Total: $125.00
+Payment: Check

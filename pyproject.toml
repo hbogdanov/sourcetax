@@ -1,0 +1,8 @@
+[project]
+name = "sourcetax"
+version = "0.1.0"
+description = "SourceTax - transaction classification and extraction platform"
+requires-python = ">=3.9"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.0"

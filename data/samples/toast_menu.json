@@ -1,0 +1,7 @@
+{
+  "menu": [
+    {"item_id":2001, "name":"Latte", "category":"Beverage", "price":4.50},
+    {"item_id":2002, "name":"Bagel", "category":"Food", "price":2.00},
+    {"item_id":2003, "name":"Sandwich", "category":"Food", "price":10.00}
+  ]
+}

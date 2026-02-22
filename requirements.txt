@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pydantic
+pytesseract
+pillow
+opencv-python
+scikit-learn
+pytest

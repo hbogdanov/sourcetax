@@ -1,0 +1,27 @@
+"""Ingest sample data (if not already) and generate QuickBooks CSV + Schedule C totals."""
+from pathlib import Path
+from sourcetax.ingest import ingest_and_store
+from sourcetax import exporter
+
+
+def ensure_data():
+    # ingest sample toast and bank if DB empty-ish
+    n = ingest_and_store('data/samples/toast_sample.csv', 'toast', db_path='data/store.db')
+    print('Ingested toast:', n)
+    n = ingest_and_store('data/samples/bank_sample.csv', 'bank', db_path='data/store.db')
+    print('Ingested bank:', n)
+
+
+def generate():
+    print('Generating QuickBooks CSV...')
+    qb = exporter.generate_quickbooks_csv(out_path='outputs/quickbooks_import.csv', db_path='data/store.db')
+    print('QuickBooks CSV:', qb)
+    print('Computing Schedule C totals...')
+    totals = exporter.compute_schedule_c_totals(db_path='data/store.db')
+    sc = exporter.write_schedule_c_csv(totals, out_path='outputs/schedule_c_totals.csv')
+    print('Schedule C totals:', sc)
+
+
+if __name__ == '__main__':
+    ensure_data()
+    generate()

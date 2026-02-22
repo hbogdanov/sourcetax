@@ -1,0 +1,6 @@
+date,location,gl_account,gl_description,amount,currency
+2026-02-20,Main,4000,Sales - Food,1500.00,USD
+2026-02-20,Main,4010,Sales - Beverage,350.00,USD
+2026-02-20,Main,5000,Discounts,-50.00,USD
+2026-02-21,Main,2100,Sales Tax Collected,130.00,USD
+2026-02-21,Main,6000,Tips,200.00,USD

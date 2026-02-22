@@ -1,0 +1,8 @@
+merchant,category_code,category_name,notes
+COFFEE SHOP,MEAL,Meals (50% limit),small cafe purchases presumed meals
+ACME SUPPLY CO,SUP,Supplies,office and restaurant supplies
+UBER,TRV,Travel,Rides for business travel
+WALMART,SUP,Supplies,General supplies and small equipment
+TOAST,AD,Advertising,platform fees often marketing-related
+GAS STATION,TRV,Travel,vehicle fuel (car/ truck expenses may apply)
+SAM'S CLUB,SUP,Supplies,bulk purchases

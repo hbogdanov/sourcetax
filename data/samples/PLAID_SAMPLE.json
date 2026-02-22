@@ -1,0 +1,9 @@
+{
+  "accounts": [
+    {"account_id": "acc_123", "name": "Business Checking"}
+  ],
+  "transactions": [
+    {"transaction_id": "tx_1", "date": "2026-02-20", "name": "COFFEE SHOP", "amount": 4.5, "type": "credit"},
+    {"transaction_id": "tx_2", "date": "2026-02-19", "name": "ACME SUPPLY CO", "amount": -125.0, "type": "debit"}
+  ]
+}

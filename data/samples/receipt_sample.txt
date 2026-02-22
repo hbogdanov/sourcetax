@@ -1,0 +1,9 @@
+Coffee Shop
+123 Main St
+02/21/2026
+Subtotal: $4.50
+Tax: $0.36
+Tip: $0.00
+Total: $4.86
+Payment: Card
+Order #: 1001

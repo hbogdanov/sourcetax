@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+src/sourcetax/app.py
+src/sourcetax/core.py
+src/sourcetax.egg-info/PKG-INFO
+src/sourcetax.egg-info/SOURCES.txt
+src/sourcetax.egg-info/dependency_links.txt
+src/sourcetax.egg-info/top_level.txt
+tests/test_core.py

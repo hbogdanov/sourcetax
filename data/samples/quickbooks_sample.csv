@@ -1,0 +1,8 @@
+Date,Description,Payee,Category,Amount,Account
+2026-02-01,Card payment - ACME Cafe,ACME Cafe,Meals and Entertainment,-12.75,Checking
+2026-02-02,Wire transfer - Client Refund,Client A,Refunds,100.00,Checking
+2026-02-05,POS Deposit - Toast Sales,Toast POS,Sales,345.60,Undeposited Funds
+2026-02-06,ACH Payment - Utilities,Electric Co,Utilities,-78.12,Checking
+2026-02-10,Check 1023 - Office Rent,Landlord,Rent,-1200.00,Checking
+2026-02-12,Credit Card Payment - Stripe,Stripe,Payment Processing,-25.50,Checking
+2026-02-15,Deposit - Customer Payment,Client B,Income,850.00,Undeposited Funds

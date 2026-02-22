@@ -1,0 +1,34 @@
+{
+  "transactions": [
+    {
+      "transaction_id": "plaid_tx_1001",
+      "account_id": "plaid_acc_1",
+      "amount": -12.75,
+      "date": "2026-02-01",
+      "name": "ACME CAFE",
+      "merchant_name": "ACME Cafe",
+      "category": ["Shops", "Coffee Shop"],
+      "payment_channel": "in store"
+    },
+    {
+      "transaction_id": "plaid_tx_1002",
+      "account_id": "plaid_acc_1",
+      "amount": 850.00,
+      "date": "2026-02-15",
+      "name": "Client B",
+      "merchant_name": null,
+      "category": ["Income"],
+      "payment_channel": "other"
+    },
+    {
+      "transaction_id": "plaid_tx_1003",
+      "account_id": "plaid_acc_2",
+      "amount": -78.12,
+      "date": "2026-02-06",
+      "name": "ELECTRIC CO",
+      "merchant_name": "Electric Co",
+      "category": ["Bills & Utilities"],
+      "payment_channel": "ach"
+    }
+  ]
+}

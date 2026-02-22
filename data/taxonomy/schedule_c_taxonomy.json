@@ -1,0 +1,22 @@
+[
+  {"code": "AD", "name": "Advertising", "schedule_c_line": "8"},
+  {"code": "C&T", "name": "Car and Truck Expenses", "schedule_c_line": "9"},
+  {"code": "CM", "name": "Commissions and Fees", "schedule_c_line": "10"},
+  {"code": "CL", "name": "Contract Labor", "schedule_c_line": "11"},
+  {"code": "DEP", "name": "Depreciation", "schedule_c_line": "13"},
+  {"code": "EBP", "name": "Employee Benefit Programs", "schedule_c_line": "14"},
+  {"code": "INS", "name": "Insurance (other than health)", "schedule_c_line": "15"},
+  {"code": "INT", "name": "Interest", "schedule_c_line": "16a"},
+  {"code": "LPS", "name": "Legal and Professional Services", "schedule_c_line": "17"},
+  {"code": "OFF", "name": "Office Expense", "schedule_c_line": "18"},
+  {"code": "PEN", "name": "Pension and Profit-Sharing Plans", "schedule_c_line": "19"},
+  {"code": "REN", "name": "Rent or Lease", "schedule_c_line": "20a"},
+  {"code": "R&M", "name": "Repairs and Maintenance", "schedule_c_line": "21"},
+  {"code": "SUP", "name": "Supplies", "schedule_c_line": "22"},
+  {"code": "TAX", "name": "Taxes and Licenses", "schedule_c_line": "23"},
+  {"code": "TRV", "name": "Travel", "schedule_c_line": "24a"},
+  {"code": "MEAL", "name": "Meals (50% limit)", "schedule_c_line": "24b"},
+  {"code": "UTIL", "name": "Utilities", "schedule_c_line": "25"},
+  {"code": "WAG", "name": "Wages", "schedule_c_line": "26"},
+  {"code": "OTH", "name": "Other Expenses", "schedule_c_line": "27"}
+]

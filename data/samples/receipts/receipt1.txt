@@ -1,0 +1,9 @@
+Coffee Shop
+123 Main St
+02/20/2026
+Order #: 1001
+Latte 1 x $4.50
+Subtotal: $4.50
+Tax: $0.36
+Total: $4.86
+Payment: Card

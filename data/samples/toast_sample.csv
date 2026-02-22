@@ -1,0 +1,4 @@
+order_id,date,location,item_id,quantity,price,total,payment_type,tip,tax,refund,void
+1001,2026-02-20,Main,2001,1,4.50,4.50,card,0.00,0.36,0,0
+1002,2026-02-20,Main,2002,2,2.00,4.00,cash,0.00,0.32,0,0
+1003,2026-02-21,Main,2003,1,10.00,10.00,card,2.00,0.80,0,0

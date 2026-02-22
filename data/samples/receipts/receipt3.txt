@@ -1,0 +1,9 @@
+GROCERY MART
+789 Market Ave
+02/21/2026
+Item A 2 x $3.00
+Item B 1 x $5.00
+Subtotal: $11.00
+Tax: $0.88
+Total: $11.88
+Payment: Card

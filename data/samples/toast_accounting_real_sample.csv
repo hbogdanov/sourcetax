@@ -1,0 +1,8 @@
+Date,Order ID,Item,Qty,Unit Price,Tax,Tip,Total,Payment Method,GL Account
+2026-02-01,1001,Latte,2,4.50,0.68,0.00,9.68,Card,4000-Sales
+2026-02-01,1001,Blueberry Muffin,1,3.00,0.21,0.00,3.21,Card,4000-Sales
+2026-02-01,1001,Service Charge,1,0.00,0.00,1.50,1.50,Card,5000-Service
+2026-02-03,1002,Lunch Combo,1,12.00,0.90,0.00,12.90,Card,4000-Sales
+2026-02-04,1003,Gift Card Sale,1,50.00,0.00,0.00,50.00,Card,2200-GiftCards
+2026-02-05,1004,Food Delivery Fee,1,3.50,0.00,0.00,3.50,Card,4010-Fees
+2026-02-05,1004,Takeout Order,1,22.00,1.65,0.00,23.65,Card,4000-Sales
