@@ -169,9 +169,6 @@ python tools/generate_reports.py             # Ingest samples and generate expor
 - FUNSD forms: 149 examples (with images in `data/forms/funsd/images/`)
 - **Total:** 169 canonical JSONL records
 
-## Phase 1 — Complete ✅
-
-**Status:** Canonical schema, ingestion, storage, and basic export implemented.
 ## Using the Pipeline
 
 ### Python API
