@@ -8,7 +8,7 @@ Precomputes embeddings and caches them (don't recompute each run).
 
 import pickle
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 
