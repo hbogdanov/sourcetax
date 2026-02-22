@@ -3,6 +3,7 @@ from typing import Dict, Iterable
 from pathlib import Path
 from .schema import CanonicalRecord
 from . import storage
+from . import receipts
 import datetime
 
 
@@ -131,6 +132,49 @@ def ingest_and_store(path: str, source: str, db_path: str = "data/store.db") -> 
         storage.insert_record(rec.to_row(), path=storage.DB_PATH)
         count += 1
     return count
+
+
+def ingest_receipt_file(
+    receipt_path: str | Path,
+    db_path: str = "data/store.db",
+    ocr_method: str = "tesseract",
+) -> bool:
+    """
+    Ingest a single receipt file (JPG, PNG, PDF).
+    Extract OCR text, parse fields, store as canonical record.
+    
+    Returns True if successful, False if extraction failed.
+    """
+    receipt_path = Path(receipt_path)
+    if not receipt_path.exists():
+        return False
+    
+    try:
+        # Extract OCR + fields
+        extracted = receipts.ingest_receipt(receipt_path, ocr_method=ocr_method)
+        fields = extracted["extracted_fields"]
+        
+        # Normalize to canonical
+        row = {
+            "date": fields.get("date"),
+            "merchant": fields.get("merchant"),
+            "total": fields.get("total"),
+            "tax": fields.get("tax"),
+            "tip": fields.get("tip"),
+            "receipt_file": receipt_path.name,
+            "confidence": 0.7,  # receipts are noisy
+        }
+        norm = normalize_to_canonical(row, source="receipt")
+        norm["raw_payload"]["ocr_text"] = extracted["ocr_full_text"]
+        
+        # Store
+        storage.DB_PATH = Path(db_path)
+        rec = CanonicalRecord.from_normalized(norm)
+        storage.insert_record(rec.to_row(), path=storage.DB_PATH)
+        return True
+    except Exception as e:
+        print(f"Error ingesting receipt {receipt_path}: {e}")
+        return False
 
 
 if __name__ == "__main__":
