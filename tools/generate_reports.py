@@ -29,8 +29,8 @@ def generate():
     )
     print("QuickBooks CSV:", qb)
     print("Computing Schedule C totals...")
-    totals = exporter.compute_schedule_c_totals(db_path="data/store.db")
-    sc = exporter.write_schedule_c_csv(totals, out_path="outputs/schedule_c_totals.csv")
+    totals, counts = exporter.compute_schedule_c_totals(db_path="data/store.db")
+    sc = exporter.write_schedule_c_csv(totals, count_by_category=counts, out_path="outputs/schedule_c_totals.csv")
     print("Schedule C totals:", sc)
 
 
