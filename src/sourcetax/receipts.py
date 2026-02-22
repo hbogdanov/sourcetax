@@ -5,6 +5,7 @@ Phase 2.1: Extract merchant, date, total, tax, tip from receipt images/PDFs.
 """
 
 import re
+import importlib.util
 from pathlib import Path
 from typing import Dict, Optional
 import hashlib
@@ -16,8 +17,9 @@ try:
 except ImportError:
     HAS_TESSERACT = False
 
-# EasyOCR is optional and must be imported lazily inside the function
-HAS_EASYOCR = False
+def _has_easyocr() -> bool:
+    """Check EasyOCR availability without importing torch-heavy modules."""
+    return importlib.util.find_spec("easyocr") is not None
 
 
 def ocr_image_tesseract(image_path: Path) -> str:
@@ -71,7 +73,7 @@ def extract_ocr_text(receipt_path: Path, method: str = "tesseract") -> str:
         try:
             return ocr_image_tesseract(receipt_path)
         except ImportError:
-            if HAS_EASYOCR:
+            if _has_easyocr():
                 return ocr_image_easyocr(receipt_path)
             raise
     elif method == "easyocr":

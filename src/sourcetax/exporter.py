@@ -2,7 +2,6 @@ import sqlite3
 from pathlib import Path
 import csv
 import json
-from datetime import datetime
 from .taxonomy import load_merchant_map
 
 
@@ -198,4 +197,98 @@ def export_metrics(db_path: str = "data/store.db") -> dict:
         "total_expenses": total_expenses,
         "total_amount": total_amount,
         "match_rate": matched_receipts / total_receipts if total_receipts > 0 else 0.0,
+    }
+
+
+def count_gold_records(gold_path: str = "data/gold/gold_transactions.jsonl") -> int:
+    """Count JSONL rows in the gold set file."""
+    p = Path(gold_path)
+    if not p.exists():
+        return 0
+    with p.open(encoding="utf-8") as fh:
+        return sum(1 for line in fh if line.strip())
+
+
+def export_gold_transactions_jsonl(
+    db_path: str = "data/store.db",
+    gold_path: str = "data/gold/gold_transactions.jsonl",
+    append: bool = True,
+) -> dict:
+    """Export reviewed records (`category_final`) into the ML gold JSONL dataset.
+
+    Appends new records by default and de-duplicates by `id` against the existing gold set.
+    """
+    outp = Path(gold_path)
+    outp.parent.mkdir(parents=True, exist_ok=True)
+
+    existing_ids = set()
+    if append and outp.exists():
+        with outp.open(encoding="utf-8") as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                try:
+                    rec = json.loads(line)
+                except Exception:
+                    continue
+                rec_id = rec.get("id")
+                if rec_id:
+                    existing_ids.add(rec_id)
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT id, source, transaction_date, merchant_raw, merchant_norm, amount,
+               category_pred, category_final, raw_payload, matched_transaction_id, match_score
+        FROM canonical_records
+        WHERE category_final IS NOT NULL AND TRIM(category_final) != ''
+        ORDER BY transaction_date DESC, id
+        """
+    )
+
+    rows = cur.fetchall()
+    conn.close()
+
+    mode = "a" if append else "w"
+    exported = 0
+    skipped_existing = 0
+
+    with outp.open(mode, encoding="utf-8") as fh:
+        for row in rows:
+            if row["id"] and row["id"] in existing_ids:
+                skipped_existing += 1
+                continue
+
+            raw_payload = row["raw_payload"]
+            if isinstance(raw_payload, str):
+                try:
+                    raw_payload = json.loads(raw_payload)
+                except Exception:
+                    raw_payload = {"raw_payload_text": raw_payload}
+            if not isinstance(raw_payload, dict):
+                raw_payload = {}
+
+            record = {
+                "id": row["id"],
+                "source": row["source"],
+                "transaction_date": row["transaction_date"],
+                "merchant_raw": row["merchant_raw"],
+                "merchant_norm": row["merchant_norm"],
+                "amount": row["amount"],
+                "category_pred": row["category_pred"],
+                "category_final": row["category_final"],
+                "matched_transaction_id": row["matched_transaction_id"],
+                "match_score": row["match_score"],
+                "raw_payload": raw_payload,
+            }
+            fh.write(json.dumps(record) + "\n")
+            exported += 1
+
+    return {
+        "path": str(outp),
+        "exported": exported,
+        "skipped_existing": skipped_existing,
+        "total_after": count_gold_records(str(outp)),
     }

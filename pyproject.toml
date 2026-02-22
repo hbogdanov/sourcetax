@@ -15,11 +15,13 @@ dependencies = [
 [project.optional-dependencies]
 matching = ["rapidfuzz>=2.0.0"]
 ml = ["scikit-learn>=1.0.0", "pandas>=1.3.0"]
-embeddings = ["sentence-transformers>=2.2.0"]
+embeddings = [
+    "sentence-transformers>=2.2.0",
+    "torch>=2.2.0,<2.3.0",
+]
 ocr = [
-    "easyocr>=1.6.0",
-    # Recommend pinned torch/torchvision combos for reproducible demos.
-    # These are suggestions; users on CUDA should install appropriate wheels.
+    "easyocr>=1.6.0,<1.8.0",
+    # Pinned torch/torchvision combos for reproducible CPU demos.
     "torch>=2.2.0,<2.3.0",
     "torchvision>=0.17.0,<0.18.0",
 ]

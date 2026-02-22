@@ -54,21 +54,23 @@ Workflow:
 2. Approve or override matches
 3. Override category predictions where rules are wrong
 4. Save overrides to database
+5. From the Dashboard, click **Export reviewed labels to gold_transactions.jsonl**
 
-Export reviewed transactions with:
+Notes:
+- The Dashboard shows progress toward a target of 200 gold labels.
+- Export writes reviewed rows (`category_final` set) to `data/gold/gold_transactions.jsonl`.
+- Export de-duplicates by record `id` when appending.
+
+You can also export programmatically:
 ```python
-from sourcetax.storage import get_all_records
-from pathlib import Path
+from sourcetax import exporter
 
-records = get_all_records(Path("data/store.db"))
-# Filter to high-confidence, manually-reviewed records
-gold_records = [r for r in records if r.confidence > 0.8 or r.category_final]
-
-# Export to gold_transactions.jsonl
-import json
-with open("data/gold/gold_transactions.jsonl", "w") as f:
-    for r in gold_records:
-        f.write(json.dumps(r.__dict__) + "\n")
+result = exporter.export_gold_transactions_jsonl(
+    db_path="data/store.db",
+    gold_path="data/gold/gold_transactions.jsonl",
+    append=True,
+)
+print(result)
 ```
 
 ## Evaluation

@@ -13,10 +13,11 @@ This tool should not import heavy optional deps at module import time.
 import logging
 from pathlib import Path
 import sys
+import sqlite3
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from sourcetax import ingest, matching, categorization, exporter
+from sourcetax import ingest, matching, categorization, exporter, storage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("smoke_run")
@@ -24,44 +25,59 @@ logger = logging.getLogger("smoke_run")
 
 def main():
     logger.info("Starting smoke run: ingest -> match -> categorize -> export")
+    db_path = Path("tmp/smoke_store.db")
+    out_csv = Path("outputs/smoke_quickbooks_import.csv")
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+
+    if db_path.exists():
+        db_path.unlink()
+    storage.ensure_db(db_path)
 
     # Ingest sample files if present
     n = 0
     try:
-        n = ingest.ingest_and_store("data/samples/bank_sample.csv", "bank")
+        n = ingest.ingest_and_store("data/samples/bank_sample.csv", "bank", db_path=str(db_path))
         logger.info(f"Ingested bank samples: {n}")
     except Exception as e:
         logger.warning(f"Skipping bank ingest: {e}")
 
     try:
-        n = ingest.ingest_and_store("data/samples/toast_sample.csv", "toast")
+        n = ingest.ingest_and_store("data/samples/toast_sample.csv", "toast", db_path=str(db_path))
         logger.info(f"Ingested toast samples: {n}")
     except Exception as e:
         logger.warning(f"Skipping toast ingest: {e}")
 
     # Run matching
     try:
-        matched = matching.match_all_receipts()
+        matched = matching.match_all_receipts(str(db_path))
         logger.info(f"Matched receipts: {matched}")
     except Exception as e:
         logger.warning(f"Matching failed: {e}")
 
     # Categorize
     try:
-        records = []
-        # Use categorization.categorize_all_records if available
-        if hasattr(categorization, "categorize_all_records"):
-            categorized = categorization.categorize_all_records(records)
-            logger.info(f"Categorized {len(categorized)} records")
+        categorized = categorization.categorize_all_records(str(db_path))
+        logger.info(f"Categorized {categorized} records")
     except Exception as e:
         logger.warning(f"Categorization failed: {e}")
 
     # Export (best-effort)
     try:
-        exporter.generate_quickbooks_csv([], Path("outputs/quickbooks_import.csv"))
-        logger.info("Exported QuickBooks CSV (demo placeholder)")
+        out_path = exporter.generate_quickbooks_csv(str(out_csv), str(db_path))
+        logger.info(f"Exported QuickBooks CSV: {out_path}")
     except Exception as e:
         logger.warning(f"Export failed: {e}")
+
+    try:
+        conn = sqlite3.connect(str(db_path))
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM canonical_records")
+        total = cur.fetchone()[0]
+        conn.close()
+        logger.info(f"Smoke DB records: {total}")
+    except Exception as e:
+        logger.warning(f"DB verification failed: {e}")
 
     logger.info("Smoke run complete")
 

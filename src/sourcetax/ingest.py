@@ -4,7 +4,7 @@ from pathlib import Path
 from .schema import CanonicalRecord
 from . import storage
 from . import receipts
-from sourcetax.models import merchant_normalizer
+from .normalization import normalize_merchant_name
 import datetime
 
 
@@ -15,16 +15,6 @@ def normalize_to_canonical(row: Dict[str, str], source: str) -> Dict:
     
     Phase 2: includes merchant_raw/merchant_norm, category_pred, single confidence float.
     """
-    # Helper function to normalize merchant name (lowercase, strip punctuation)
-    def norm_merchant(s: str) -> str:
-        if not s:
-            return ""
-        try:
-            clean, _, _ = merchant_normalizer.normalize_merchant(s)
-            return clean.lower()
-        except Exception:
-            return s.lower().replace(",", "").replace(".", "").replace("  ", " ").strip()
-
     merchant_raw = None
     if source == "toast":
         merchant_raw = row.get("location")
@@ -42,7 +32,7 @@ def normalize_to_canonical(row: Dict[str, str], source: str) -> Dict:
         "source_record_id": None,
         "transaction_date": None,
         "merchant_raw": merchant_raw,
-        "merchant_norm": norm_merchant(merchant_raw) if merchant_raw else None,
+        "merchant_norm": normalize_merchant_name(merchant_raw, case="lower") if merchant_raw else None,
         "merchant_name": merchant_raw,  # backward compat
         "amount": None,
         "currency": "USD",
