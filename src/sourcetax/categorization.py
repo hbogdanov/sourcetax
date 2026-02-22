@@ -44,7 +44,11 @@ KEYWORD_RULES = {
 
 
 def load_merchant_category_map(path: str = "data/mappings/merchant_category.csv") -> Dict[str, str]:
-    """Load exact merchant → category mapping from CSV."""
+    """Load exact merchant → category mapping from CSV.
+    
+    CSV columns: merchant, category_code, category_name, notes
+    Returns dict mapping merchant (uppercase) → category_name
+    """
     mapping = {}
     p = Path(path)
     if not p.exists():
@@ -55,7 +59,8 @@ def load_merchant_category_map(path: str = "data/mappings/merchant_category.csv"
             reader = csv.DictReader(f)
             for row in reader:
                 merchant = row.get("merchant", "").strip().upper()
-                category = row.get("category", "").strip()
+                # Read category_name (human-readable) for exports
+                category = row.get("category_name", "").strip()
                 if merchant and category:
                     mapping[merchant] = category
     except Exception as e:

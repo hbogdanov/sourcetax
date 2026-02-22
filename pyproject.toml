@@ -1,18 +1,20 @@
 [project]
 name = "sourcetax"
-version = "0.1.0"
-description = "SourceTax - transaction classification and extraction platform"
+version = "0.2.0"
+description = "SourceTax - transaction classification and receipt linking for tax prep"
 authors = [{name = "SourceTax Contributors"}]
 requires-python = ">=3.9"
 dependencies = [
     "fastapi>=0.95.0",
     "python-multipart>=0.0.5",
-    "datasets>=2.0.0",
-    "huggingface-hub>=0.15.0",
     "Pillow>=9.0.0",
+    "pytesseract>=0.3.0",
+    "streamlit>=1.28.0",
+    "difflib-python>=1.0.0",
 ]
 
 [project.optional-dependencies]
+ocr-easyocr = ["easyocr>=1.6.0"]
 dev = [
     "pytest>=7.0",
     "black>=23.0",
@@ -22,6 +24,9 @@ dev = [
 [build-system]
 requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.black]
 line-length = 100
