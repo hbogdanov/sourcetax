@@ -1,19 +1,47 @@
 # SourceTax — Transaction Classification & Tax Automation
 
-An AI-driven pipeline that ingests transaction data from POS systems, banks, and receipts, then normalizes, extracts, categorizes, and exports to QuickBooks and Schedule C tax forms.
+An AI-driven pipeline that ingests transaction data from banks, POS systems, and receipt images, then normalizes, extracts, categorizes, and exports to QuickBooks and Schedule C tax forms.
 
 ## Quick Start
 
+### Installation
+
 ```bash
-# Clone and install
+# Clone repo
 git clone <repo>
 cd sourcetax
-pip install -e .
 
-# Run demo ingestion and export
+# Option 1: Install from pyproject.toml (recommended)
+pip install -e .
+pip install -e ".[dev]"  # for development tools (black, ruff, pytest)
+
+# Option 2: Install from requirements.txt
+pip install -r requirements.txt
+```
+
+### Run Demo
+
+```bash
+# Full end-to-end: ingest samples, match receipts, categorize, export
 python tools/generate_reports.py
 
-# Expected output: outputs/quickbooks_import.csv, outputs/schedule_c_totals.csv
+# Outputs:
+#   outputs/quickbooks_import.csv     — QB import format
+#   outputs/schedule_c_totals.csv     — Schedule C category breakdown
+#   outputs/audit_pack.csv            — full transaction trail with confidence
+```
+
+### Launch Review UI
+
+```bash
+# Interactive Streamlit dashboard for reviewing/overriding categories
+streamlit run app_review.py
+
+# Opens http://localhost:8501
+# Features:
+#   - Dashboard: metrics, auto-match/categorize buttons
+#   - Unmatched receipts/transactions: review and link
+#   - Category override: change predictions and save overrides
 ```
 
 ## Architecture
@@ -21,43 +49,80 @@ python tools/generate_reports.py
 A modular, staged pipeline:
 
 1. **Ingest** (`src/sourcetax/ingest.py`)  
-   Read receipts, bank CSVs, Toast POS exports into a canonical schema.
+   Read CSVs (QB, bank, Toast) and receipt image files into canonical schema.
 
 2. **Normalize** (`src/sourcetax/schema.py`)  
-   Standardize dates, amounts, merchant names across all sources.
+   Standardize dates, amounts, merchant names, directions across all sources.
 
 3. **Store** (`src/sourcetax/storage.py`)  
-   Persist canonical records to SQLite for querying and experimentation.
+   Persist canonical records to SQLite for querying and iteration.
 
-4. **Extract** (Phase 2)  
-   OCR receipt images (Tesseract), parse structured forms (FUNSD), etc.
+4. **Extract** (`src/sourcetax/receipts.py` — Phase 2)  
+   OCR receipt images (Tesseract/EasyOCR), parse fields (date, merchant, total, tax).
 
-5. **Categorize** (Phase 3)  
-   Rule-based and ML-based classification to Schedule C categories.
+5. **Match** (`src/sourcetax/matching.py` — Phase 2)  
+   Link receipt documents to bank transactions with fuzzy matching.
 
-6. **Export** (`src/sourcetax/exporter.py`)  
-   Generate QuickBooks CSV, Schedule C totals, audit reports.
+6. **Categorize** (`src/sourcetax/categorization.py` — Phase 2)  
+   Rules-based classification (merchant exact/fuzzy match, keywords, user overrides).
 
-## Phase 0 — Complete ✅
+7. **Export** (`src/sourcetax/exporter.py`)  
+   Generate QuickBooks CSV, Schedule C totals, audit pack.
 
-**Status:** Representative sample data and public datasets collected. Canonical schema and basic ingestion/export pipeline implemented.
+## Phase Completion Status
 
-**What's Included:**
-- Real-format sample data: QuickBooks CSV, Toast accounting, Plaid bank transactions, receipt text samples.
-- Public datasets: FUNSD forms (149 examples + images), CORD subset in `data/samples/cord/`.
-- Canonical schema: `src/sourcetax/schema.py` with `CanonicalRecord` dataclass.
-- Ingestion pipeline: `src/sourcetax/ingest.py` with normalizers for CSV/JSON sources.
-- Storage: SQLite database at `data/store.db` with `canonical_records` table.
-- Export: `src/sourcetax/exporter.py` generates QuickBooks CSV and Schedule C totals.
-- Taxonomy: `data/taxonomy/schedule_c_taxonomy.json` and merchant→category mapping `data/mappings/merchant_category.csv`.
-- Combined dataset: `data/combined_dataset/combined_samples.jsonl` (169 canonical JSONL records: 7 QB, 7 Toast, 3 bank, 3 receipt, 149 FUNSD).
+### Phase 0 — ✅ Complete
 
-**Key Files:**
-- `src/sourcetax/core.py` — simple extraction primitives
-- `src/sourcetax/schema.py` — canonical record definition
-- `src/sourcetax/ingest.py` — CSV/JSON reading and normalization
-- `src/sourcetax/storage.py` — SQLite persistence
-- `src/sourcetax/exporter.py` — QuickBooks + Schedule C generation
+**Foundation:** Canonical schema, sample data, basic CSV ingestion, SQLite storage.
+
+**What's Here:**
+- Real-format sample data (QB, Toast, bank CSV)
+- Public datasets (FUNSD forms, CORD receipts)
+- `CanonicalRecord` dataclass with 13 fields
+- CSV ingestors for toast, bank, quickbooks
+- SQLite schema and basic I/O
+
+### Phase 1 — ✅ Complete (phase1 branch)
+
+**Schema & Cleanup:** Enhanced canonical schema, fixed encoding, code formatting, repo hygiene.
+
+**What's Here:**
+- Added direction field (expense|income), category fields, source traceability
+- Fixed pyproject.toml to PEP 621
+- Updated .gitignore to exclude large artifacts
+- All tests pass, demo works deterministically
+
+### Phase 2 — ✅ Complete (phase2 branch)
+
+**Receipt Extraction, Matching, Categorization, Review UI.**
+
+**Phase 2.1 — Receipt OCR:**
+- `src/sourcetax/receipts.py` — Tesseract/EasyOCR integration
+- Field extraction: date, merchant, total, tax, tip
+- Heuristic-based (regex + keyword search)
+
+**Phase 2.2 — Transaction Matching:**
+- `src/sourcetax/matching.py` — Receipt ↔ bank fuzzy matching
+- Scoring: date (±3d), amount (±$10), merchant (>80% similarity)
+- `list_unmatched_receipts()`, `list_unmatched_transactions()` for UI
+
+**Phase 2.3 — Categorization Rules Engine:**
+- `src/sourcetax/categorization.py` — Priority rules (learned > exact > fuzzy > keywords)
+- Keyword rules: UBER→Travel, STARBUCKS→Meals, HOME DEPOT→Supplies, etc.
+- Learned overrides: user sets merchant category once, applies to all
+
+**Phase 2.4 — Exports & Audit:**
+- QB CSV uses `category_final` (user overrides)
+- Schedule C totals by category
+- Audit pack: full record trail with match scores + confidence
+- Metrics export: record counts, expense totals, match rates
+
+**UI:**
+- `app_review.py` — Streamlit dashboard
+  - Dashboard: metrics, auto-match/auto-categorize buttons
+  - Unmatched receipts: list + detail view with OCR excerpt
+  - Unmatched transactions: identify orphans
+  - Match review: approve matches, override categories, save
 - `src/sourcetax/taxonomy.py` — category and merchant mapping helpers
 - `data/samples/` — real-like export examples
 - `data/forms/funsd/` — FUNSD dataset (149 forms + images)
@@ -82,55 +147,168 @@ python tools/generate_reports.py             # Ingest samples and generate expor
 ## Phase 1 — Complete ✅
 
 **Status:** Canonical schema, ingestion, storage, and basic export implemented.
+## Using the Pipeline
 
-- Ingests real-format data (QuickBooks, Toast, Plaid/bank, receipt text) into canonical records.
-- Normalizes dates, amounts, merchant names.
-- Persists records to SQLite.
-- Exports to QuickBooks CSV and Schedule C totals.
+### Python API
 
-## Phase 2 — Receipt Extraction
+```python
+from pathlib import Path
+from sourcetax import storage, ingest, matching, categorization, exporter
 
-**Planned:** OCR + field extraction from receipt images and forms.
+# 1. Ingest from CSV
+records = ingest.read_csv("data/samples/bank_chase.csv", source="bank")
+for record in records:
+    print(record.merchant_raw, record.amount)
 
-## Phase 3 — Categorization
+# 2. Store to database
+db_path = Path("data/store.db")
+ingest.ingest_and_store(["data/samples/bank_chase.csv"], source="bank", db_path=db_path)
 
-**Planned:** Rule-based + ML-based category assignment (Schedule C taxonomy).
+# 3. Retrieve from database
+records = storage.get_all_records(db_path)
+print(f"Total records: {len(records)}")
 
-## Phase 4 — Advanced Exports
+# 4. Match receipts to transactions
+matched = matching.match_all_receipts(records, db_path=db_path)
+unmatched_receipts = matching.list_unmatched_receipts(records)
 
-**Planned:** GL reconciliation, audit reports, TurboTax/IRS Form integration.
+# 5. Categorize
+categorized = categorization.categorize_all_records(records, db_path=db_path)
+
+# 6. Export
+exporter.generate_quickbooks_csv(records, Path("outputs/quickbooks_import.csv"))
+exporter.compute_schedule_c_totals(records)
+```
+
+## Data Sources
+
+**Sample Data in `data/samples/`:**
+- QB: `bank_bofa.csv`, `bank_chase.csv`, `bank_sample.csv` (real-format CSV)
+- Toast: `toast_sample.csv` (POS transactions)
+- Plaid: `plaid_sample_small.json` (bank API format)
+- Receipts: `receipt_sample.txt` (OCR text)
+
+**Public Datasets:**
+- **FUNSD** (149 forms): `data/forms/funsd/9.json` … `data/forms/funsd_127.json` + images
+- **CORD** receipts: `data/samples/cord/` (subset used in Phase 2 evaluation)
+
+**Taxonomy & Mappings:**
+- `data/taxonomy/schedule_c_taxonomy.json` — Schedule C category hierarchy
+- `data/mappings/merchant_category.csv` — merchant → category rules (format: merchant,category_code,category_name,notes)
+
+## API Documentation
+
+### Core Modules
+
+**`src/sourcetax/schema.py`**  
+`CanonicalRecord` dataclass (13 fields):
+- `id`, `source`, `source_record_id`, `transaction_date`, `merchant_raw`, `merchant_norm`
+- `amount` (float), `currency` (str), `direction` (str: expense|income), `payment_method`
+- `category_pred`, `category_final`, `confidence` (float)
+- `matched_transaction_id`, `match_score`, `evidence_keys`
+- `raw_payload` (dict)
+
+**`src/sourcetax/ingest.py`**  
+Key functions:
+- `read_csv(path, source) → Iterator[dict]` — Read CSV, yield records
+- `normalize_to_canonical(row, source) → CanonicalRecord` — Convert any source to canonical
+- `ingest_and_store(paths, source, db_path)` — Read + store to SQLite
+
+**`src/sourcetax/storage.py`**  
+Key functions:
+- `ensure_db(db_path)` — Create schema if not exists
+- `insert_record(record, db_path)` — Persist canonical record
+- `get_all_records(db_path) → List[CanonicalRecord]` — Retrieve all from database
+
+**`src/sourcetax/receipts.py`** (Phase 2.1)  
+Key functions:
+- `extract_ocr_text(image_path, backend='tesseract') → str` — OCR receipt image
+- `parse_receipt_text(text) → dict` — Extract date, merchant, total, tax, tip
+- `ingest_receipt_file(image_path, source='receipt') → CanonicalRecord` — End-to-end
+
+**`src/sourcetax/matching.py`** (Phase 2.2)  
+Key functions:
+- `match_receipt_to_bank(receipt, bank_txns) → (score, matched_txn)` — Single match
+- `match_all_receipts(records, db_path=None) → List[CanonicalRecord]` — Bulk matching
+- `list_unmatched_receipts(records) → List[CanonicalRecord]` — Orphan receipts
+- `list_unmatched_transactions(records) → List[CanonicalRecord]` — Orphan bank transactions
+
+**`src/sourcetax/categorization.py`** (Phase 2.3)  
+Key functions:
+- `categorize_record(record) → CanonicalRecord` — Apply rules once
+- `categorize_all_records(records, db_path=None) → List[CanonicalRecord]` — Bulk categorization
+- `load_merchant_category_map(csv_path) → dict` — Load merchant → category learned overrides
+
+**`src/sourcetax/exporter.py`** (Phase 2.4)  
+Key functions:
+- `generate_quickbooks_csv(records, output_path)` — QB format (uses `category_final`)
+- `compute_schedule_c_totals(records) → dict` — By-category breakdown
+- `write_schedule_c_csv(totals, output_path)` — SC CSV export
+- `export_audit_pack(records, output_path)` — Full detail export
+- `export_metrics(records) → dict` — Count, total, match rate, etc.
 
 ## Directory Structure
 
 ```
 sourcetax/
 ├── src/sourcetax/           # Core packages
-│   ├── app.py              # Entry point
-│   ├── core.py             # Extraction primitives
-│   ├── ingest.py           # Ingestion pipeline
-│   ├── schema.py           # Canonical record schema
-│   ├── storage.py          # SQLite helpers
-│   ├── exporter.py         # QuickBooks/Schedule C export
-│   └── taxonomy.py         # Taxonomy and merchant mapping
+│   ├── __init__.py         # Package marker
+│   ├── schema.py           # CanonicalRecord dataclass
+│   ├── ingest.py           # Ingestion pipeline (CSV/receipt)
+│   ├── storage.py          # SQLite persistence
+│   ├── receipts.py         # OCR + field extraction (Phase 2.1)
+│   ├── matching.py         # Receipt↔bank matching (Phase 2.2)
+│   ├── categorization.py   # Rules engine (Phase 2.3)
+│   └── exporter.py         # QB/SC/audit exports (Phase 2.4)
 ├── data/
-│   ├── samples/            # Sample data (recap QuickBooks, Toast, Plaid, receipts)
-│   ├── forms/funsd/        # FUNSD dataset (forms + images)
-│   ├── combined_dataset/   # combined_samples.jsonl (unified canonical JSONL)
+│   ├── samples/            # Sample data (QB, Toast, Plaid, receipts)
+│   ├── forms/funsd/        # FUNSD dataset (149 forms)
+│   ├── combined_dataset/   # combined_samples.jsonl
 │   ├── taxonomy/           # Schedule C taxonomy JSON
 │   ├── mappings/           # Merchant category mapping CSV
-│   └── store.db            # SQLite database (canonical_records table)
-├── outputs/                # Generated exports (QuickBooks CSV, Schedule C)
-├── tools/                  # Utility scripts (fetch, convert, generate reports)
-├── docs/                   # Documentation (Phase 0 summary)
+│   └── store.db            # SQLite database
+├── outputs/                # Generated exports (QB CSV, Schedule C)
+├── tools/                  # Utility scripts
+│   ├── generate_reports.py # End-to-end demo (runs all phases)
+│   ├── generate_training_samples.py
+│   ├── convert_funsd_to_combined.py
+│   ├── count_combined.py
+│   └── fetch_public_datasets.py
+├── app_review.py           # Streamlit dashboard UI
 ├── tests/                  # Test suite
-├── pyproject.toml          # Package metadata and dependencies
+├── pyproject.toml          # Package metadata + dependencies
 └── README.md               # This file
 ```
 
+## Roadmap
+
+### Phase 3 — ML Categorization Baseline
+
+**Planned:** Train a small supervised classifier on Phase 2 data as baseline for future improvements.
+
+- Evaluate learned/keyword rules on gold set (200 hand-labeled records)
+- Simple baseline: TF-IDF + logistic regression on merchant name + description
+- Confusion matrix, precision/recall by Schedule C category
+- Compare: rules vs. ML vs. ensemble
+
+### Phase 4 — Advanced Exports & Reconciliation
+
+**Planned:** GL entries, journal transactions, audit trail.
+
+### Phase 5 — Multi-User & Cloud
+
+**Planned:** Web UI, user accounts, cloud storage.
+
 ## Contributing
 
-Next phases (2–6) will add OCR, ML categorization, advanced exports, UI, and productization.
+Report issues, submit PRs. Development tools:
+
+```bash
+black src/sourcetax tests          # Format code
+ruff check src/sourcetax tests     # Lint
+pytest tests/ -v                   # Run tests
+```
 
 ## License
 
-See LICENSE.
+MIT
