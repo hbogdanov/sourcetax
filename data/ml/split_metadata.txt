@@ -1,0 +1,34 @@
+# ML Dataset Split (Locked)
+
+Timestamp: 2026-02-22T14:06:13.120183
+Random seed: 42 (reproducible)
+
+## Sizes
+Train:      7 records
+Validation: 1 records
+Test:       2 records
+Total:      10 records
+
+## Categories
+Train:
+category
+Office Supplies            2
+Travel                     2
+Repairs and Maintenance    1
+Income                     1
+Meals and Lodging          1
+
+Validation:
+category
+Meals and Lodging    1
+
+Test:
+category
+Meals and Lodging    2
+
+## Important
+- Test set is SACRED. Do not tune on it.
+- Use train for training.
+- Use validation for hyperparameter search.
+- Use test only for final evaluation.
+- Never peek at test labels during development.

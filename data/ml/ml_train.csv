@@ -1,0 +1,8 @@
+id,text,merchant,description,category,source
+gold_001,AMAZON.COM AMAZON PURCHASE,AMAZON.COM,AMAZON PURCHASE,Office Supplies,bank
+gold_008,HOME DEPOT STORE 1234,HOME DEPOT STORE 1234,,Repairs and Maintenance,receipt
+gold_003,UBER TRIP UBER TRIP CHARGE,UBER TRIP,UBER TRIP CHARGE,Travel,bank
+gold_010,Client Invoice - ABC Corp,Client Invoice - ABC Corp,,Income,quickbooks
+gold_005,CHEVRON GAS FUEL PURCHASE,CHEVRON GAS,FUEL PURCHASE,Travel,bank
+gold_004,OFFICE DEPOT OFFICE DEPOT SUPPLIES,OFFICE DEPOT,OFFICE DEPOT SUPPLIES,Office Supplies,bank
+gold_007,Toast Register - Restaurant POS SALE LUNCH,Toast Register - Restaurant,POS SALE LUNCH,Meals and Lodging,toast
