@@ -61,7 +61,7 @@ def low_confidence_categorizations(
         FROM canonical_records
         WHERE COALESCE(category_final, '') = ''
           AND confidence IS NOT NULL
-          AND confidence < WARNING:
+          AND confidence < ?
         ORDER BY confidence ASC, transaction_date DESC
         """,
         (threshold,),
@@ -171,7 +171,7 @@ def summary_metrics(db_path: str = "data/store.db", low_conf_threshold: float = 
         FROM canonical_records
         WHERE COALESCE(category_final, '') = ''
           AND confidence IS NOT NULL
-          AND confidence < WARNING:
+          AND confidence < ?
         """,
         (low_conf_threshold,),
     )
