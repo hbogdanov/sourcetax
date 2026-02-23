@@ -2,6 +2,29 @@
 
 An AI-driven pipeline that ingests transaction data from banks, POS systems, and receipt images, then normalizes, extracts, categorizes, and exports to QuickBooks and Schedule C tax forms.
 
+## Current Status (Feb 2026)
+
+**Implemented and working (MVP):**
+- Demo-safe setup/test/smoke commands (`make setup`, `make smoke`, `make test`)
+- End-to-end smoke pipeline (ingest -> match -> categorize -> export -> eval)
+- Phase 3 benchmark runner (rules vs TF-IDF vs ensemble, optional SBERT)
+- Phase 4 accounting-grade exports (enriched transactions CSV, GL lines CSV, audit trail JSONL)
+- Phase 4 reconciliation reports (unmatched receipts, unmatched bank txns, low-confidence queue, conflicts queue, summary metrics)
+- Minimal adapter layer (CSV/QBO-like export + mock QuickBooks API payload)
+
+**Still in progress / not yet production-grade:**
+- Gold dataset expansion (currently ~10 labeled records; target 200+)
+- Balanced locked train/val/test splits for reliable ML metrics
+- Conflict queue quality improves once ML predictions/rationale are persisted in `raw_payload`
+- Full bookkeeping/chart-of-accounts logic (GL export is intentionally simplified)
+
+## Recent Updates
+
+- Added `tools/phase3_benchmark.py` to generate `reports/phase3_eval.md` and evaluation artifacts
+- Added `tools/phase4_run.py` to generate accounting-grade exports and reconciliation queues in one command
+- Unified merchant normalization usage via `src/sourcetax/normalization.py`
+- Added Phase 4 export/reconciliation test coverage (`tests/test_phase4_exports.py`)
+
 ## Quick Start
 
 ### Prerequisites
@@ -642,7 +665,24 @@ python tools/train_ml_advanced.py --strategy hierarchical
 
 ### Phase 4 — Advanced Exports & Reconciliation
 
-**Planned:** GL entries, journal transactions, audit trail, API integration.
+**Status:** MVP implemented (Phase 4a/4b/4c minimum viable)
+
+**Implemented:**
+- Accounting-grade enriched transactions export (`outputs/accounting_transactions_enriched.csv`)
+- GL lines export (`outputs/gl_lines.csv`) with double-entry-ish clearing account postings
+- Audit trail export (`outputs/audit_trail.jsonl`) with inputs, transformations, rule hits, match scores, and final decision rationale
+- Reconciliation queues: unmatched receipts, unmatched bank txns, low-confidence categorizations, conflicts
+- Reconciliation summary metrics (`match_rate`, `avg_confidence`, top ambiguous merchants)
+- Simple adapter seam: QBO-like CSV export and file-backed mock QuickBooks API payload
+
+**Next improvements:**
+- Persist ML/ensemble predictions and rationale in `raw_payload` during categorization to strengthen conflicts + audit trail explainability
+- Add a Streamlit reconciliation UI for queue triage
+- Expand GL/account mapping and journal posting rules beyond the current simplified clearing-account format
+
+### Phase 4 Data Quality (ML metrics reliability)
+
+**Planned / Priority:** Expand gold dataset to 200+ labeled records and lock balanced train/val/test splits.
 
 ### Phase 5 — Multi-User & Cloud
 
