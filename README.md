@@ -166,7 +166,7 @@ A modular, staged pipeline:
 
 ## Phase Completion Status
 
-### Phase 0 — ✅ Complete
+### Phase 0 — OK: Complete
 
 **Foundation:** Canonical schema, sample data, basic CSV ingestion, SQLite storage.
 
@@ -177,7 +177,7 @@ A modular, staged pipeline:
 - CSV ingestors for toast, bank, quickbooks
 - SQLite schema and basic I/O
 
-### Phase 1 — ✅ Complete (phase1 branch)
+### Phase 1 — OK: Complete (phase1 branch)
 
 **Schema & Cleanup:** Enhanced canonical schema, fixed encoding, code formatting, repo hygiene.
 
@@ -187,7 +187,7 @@ A modular, staged pipeline:
 - Updated .gitignore to exclude large artifacts
 - All tests pass, demo works deterministically
 
-### Phase 2 — ✅ Complete (phase2 branch)
+### Phase 2 — OK: Complete (phase2 branch)
 
 **Receipt Extraction, Matching, Categorization, Review UI.**
 
@@ -361,7 +361,7 @@ sourcetax/
 |   |-- ingest.py           # Ingestion pipeline (CSV/receipt)
 |   |-- storage.py          # SQLite persistence
 |   |-- receipts.py         # OCR + field extraction (Phase 2.1)
-|   |-- matching.py         # Receipt?bank matching (Phase 2.2)
+|   |-- matching.py         # ReceiptWARNING:bank matching (Phase 2.2)
 |   |-- categorization.py   # Rules engine (Phase 2.3)
 |   |-- exporter.py         # QB/SC/audit exports (Phase 2.4)
 |   `-- models/             # Phase 3 ML modules
@@ -373,7 +373,7 @@ sourcetax/
 |       |-- merchant_normalizer.py    # Rule-based merchant cleaning
 |       |-- embeddings.py             # SentenceTransformer + caching
 |       |-- active_learning.py        # 4 selection strategies
-|       |-- hierarchical.py           # Major ? subcategory classification
+|       |-- hierarchical.py           # Major WARNING: subcategory classification
 |       `-- visualize.py              # Confusion matrix, P/R charts, comparison
 |-- data/
 |   |-- samples/            # Sample data (QB, Toast, Plaid, receipts)
@@ -434,7 +434,7 @@ Before Phase 3 ML work, expand the gold dataset to ~200 records using `app_revie
 
 ## Phase 3 — ML Categorization & Advanced Features
 
-**Status:** ✅ Foundation complete. TF-IDF baseline, SBERT embeddings, active learning, and hierarchical classification implemented.
+**Status:** OK: Foundation complete. TF-IDF baseline, SBERT embeddings, active learning, and hierarchical classification implemented.
 
 ### Phase 3 Foundation (Complete)
 
@@ -640,11 +640,11 @@ python tools/train_ml_advanced.py --strategy sbert
 python tools/train_ml_advanced.py --strategy hierarchical
 
 # Output:
-#   ✅ Loaded 10 gold records (train: 7, val: 1, test: 2)
-#   ✅ TF-IDF baseline: train_acc=0.714, val_acc=1.000
-#   ✅ SBERT classifier: train_acc=0.857, val_acc=1.000
-#   ✅ Hierarchical: major_acc=1.000, sub_acc=0.857
-#   ✅ Visualizations saved to data/ml/evaluation_report/
+#   OK: Loaded 10 gold records (train: 7, val: 1, test: 2)
+#   OK: TF-IDF baseline: train_acc=0.714, val_acc=1.000
+#   OK: SBERT classifier: train_acc=0.857, val_acc=1.000
+#   OK: Hierarchical: major_acc=1.000, sub_acc=0.857
+#   OK: Visualizations saved to data/ml/evaluation_report/
 ```
 
 ### Recommended Workflow for Expanding Gold Set

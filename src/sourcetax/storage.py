@@ -47,7 +47,7 @@ def insert_record(rec: Dict[str, Any], path: Path = DB_PATH):
            (id, source, source_record_id, transaction_date, merchant_raw, merchant_norm, 
             amount, currency, direction, payment_method, category_pred, category_final, 
             confidence, matched_transaction_id, match_score, evidence_keys, raw_payload, tags) 
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:,WARNING:)""",
         (
             rec.get("id"),
             rec.get("source"),

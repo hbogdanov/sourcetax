@@ -118,7 +118,7 @@ def evaluate_ml(
 ) -> Tuple[list, list, dict]:
     """Evaluate ML model on test set."""
     if pipeline is None:
-        print("⚠️  No trained pipeline found. Run train_baseline.py first.")
+        print("WARNING:  No trained pipeline found. Run train_baseline.py first.")
         return None, None, {}
     
     y_true = test_df["category"].values
@@ -271,7 +271,7 @@ def print_results(
         print(f"{'ML':20s} {metrics_ml['accuracy']:>14.1%} {metrics_ml['macro_f1']:>14.1%} {metrics_ml['weighted_f1']:>14.1%}")
         
         ml_advantage = metrics_ml['accuracy'] - metrics_rules['accuracy']
-        direction = "📈" if ml_advantage > 0 else "📉"
+        direction = "UP" if ml_advantage > 0 else "DOWN"
         print(f"\nML Advantage: {direction} {ml_advantage:+.1%}")
     
     # Error analysis
@@ -290,11 +290,11 @@ def print_results(
 
 def main():
     """Run complete evaluation."""
-    print("📖 Loading test set...")
+    print("LOAD: Loading test set...")
     test_df = load_test_set()
     print(f"   {len(test_df)} records")
     
-    print("🔧 Loading merchant mapping...")
+    print("CONFIG: Loading merchant mapping...")
     merchant_map = load_merchant_category_map()
     
     print("\n" + "=" * 80)

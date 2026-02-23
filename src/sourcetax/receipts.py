@@ -119,7 +119,7 @@ def extract_total(text: str) -> Optional[float]:
         # Look for TOTAL, AMOUNT, BALANCE, GRAND TOTAL (case-insensitive)
         if re.search(r'\b(TOTAL|AMOUNT|BALANCE|GRAND\s+TOTAL)\b', line, re.IGNORECASE):
             # Extract number from this line or next
-            match = re.search(r'\$?\s*(\d+[.,]\d{2})', line)
+            match = re.search(r'\$WARNING:\s*(\d+[.,]\d{2})', line)
             if match:
                 amount_str = match.group(1).replace(',', '')
                 try:
@@ -138,7 +138,7 @@ def extract_tax(text: str) -> Optional[float]:
     lines = text.split('\n')
     for line in lines:
         if re.search(r'\b(TAX|GST|SALES\s+TAX)\b', line, re.IGNORECASE):
-            match = re.search(r'\$?\s*(\d+[.,]\d{2})', line)
+            match = re.search(r'\$WARNING:\s*(\d+[.,]\d{2})', line)
             if match:
                 amount_str = match.group(1).replace(',', '')
                 try:
@@ -157,7 +157,7 @@ def extract_tip(text: str) -> Optional[float]:
     lines = text.split('\n')
     for line in lines:
         if re.search(r'\b(TIP|GRATUITY)\b', line, re.IGNORECASE):
-            match = re.search(r'\$?\s*(\d+[.,]\d{2})', line)
+            match = re.search(r'\$WARNING:\s*(\d+[.,]\d{2})', line)
             if match:
                 amount_str = match.group(1).replace(',', '')
                 try:

@@ -149,7 +149,7 @@ def diversity_sampling(
     try:
         from sklearn.cluster import KMeans
     except ImportError:
-        print("⚠️  sklearn not available. Falling back to uncertainty sampling.")
+        print("WARNING:  sklearn not available. Falling back to uncertainty sampling.")
         return uncertainty_sampling(y_proba, n_select, random_fraction)
     
     # Cluster
@@ -215,7 +215,7 @@ def select_for_labeling(
     unlabeled_idx = np.where(~labeled_mask)[0]
     
     if len(unlabeled_idx) == 0:
-        print("⚠️  No unlabeled samples remaining!")
+        print("WARNING:  No unlabeled samples remaining!")
         return np.array([]), pd.DataFrame()
     
     # Adjust n_select
@@ -262,5 +262,5 @@ if __name__ == "__main__":
         embeddings, y_proba, labeled_mask, n_select=10, strategy="uncertainty"
     )
     
-    print(f"\n✅ Selected {len(selected)} samples")
+    print(f"\nOK: Selected {len(selected)} samples")
     print(summary.head())

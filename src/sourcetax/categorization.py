@@ -129,8 +129,8 @@ def get_learned_override(merchant: str, db_path: str = "data/store.db") -> Optio
             SELECT category_final FROM canonical_records
             WHERE category_final IS NOT NULL
               AND (
-                    merchant_norm = ?
-                    OR UPPER(TRIM(merchant_raw)) = ?
+                    merchant_norm = WARNING:
+                    OR UPPER(TRIM(merchant_raw)) = WARNING:
                   )
             LIMIT 1
             """,
@@ -161,7 +161,7 @@ def categorize_record(record_id: str, db_path: str = "data/store.db") -> Tuple[O
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
     cur.execute(
-        "SELECT merchant_raw, category_pred FROM canonical_records WHERE id = ?",
+        "SELECT merchant_raw, category_pred FROM canonical_records WHERE id = WARNING:",
         (record_id,),
     )
     row = cur.fetchone()
@@ -220,7 +220,7 @@ def categorize_all_records(db_path: str = "data/store.db") -> int:
         conn = sqlite3.connect(db_path)
         cur_update = conn.cursor()
         cur_update.execute(
-            "UPDATE canonical_records SET category_pred = ?, confidence = ? WHERE id = ?",
+            "UPDATE canonical_records SET category_pred = WARNING:, confidence = WARNING: WHERE id = WARNING:",
             (category, confidence, record_id),
         )
         conn.commit()
@@ -237,7 +237,7 @@ def save_category_override(record_id: str, category: str, db_path: str = "data/s
     cur = conn.cursor()
     
     cur.execute(
-        "UPDATE canonical_records SET category_final = ? WHERE id = ?",
+        "UPDATE canonical_records SET category_final = WARNING: WHERE id = WARNING:",
         (category, record_id),
     )
     

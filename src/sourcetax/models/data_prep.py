@@ -186,7 +186,7 @@ Test:
     with open(output_dir / "split_metadata.txt", "w") as f:
         f.write(metadata)
     
-    print(f"✅ Splits saved to {output_dir}")
+    print(f"OK: Splits saved to {output_dir}")
     print(metadata)
     
     return output_dir
@@ -194,7 +194,7 @@ Test:
 
 def main():
     """Load gold set, split, save."""
-    print("📖 Loading gold dataset...")
+    print("LOAD: Loading gold dataset...")
     gold_records = load_gold_set()
     print(f"   Loaded {len(gold_records)} records")
     
@@ -203,13 +203,13 @@ def main():
     print(f"   {len(df)} records with labels")
     
     if len(df) < 5:
-        print("⚠️  Warning: Very small dataset (<5 records). ML unreliable at this scale.")
+        print("WARNING:  Warning: Very small dataset (<5 records). ML unreliable at this scale.")
         print("   Next step: expand gold set to 200+ records using app_review.py")
     
-    print("📊 Splitting dataset...")
+    print("METRICS: Splitting dataset...")
     train_df, val_df, test_df = split_dataset(df)
     
-    print("💾 Saving splits...")
+    print("SAVE: Saving splits...")
     save_splits(train_df, val_df, test_df)
 
 

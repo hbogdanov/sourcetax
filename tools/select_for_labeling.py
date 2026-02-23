@@ -34,7 +34,7 @@ def load_unlabeled_pool(data_dir: Path = None) -> pd.DataFrame:
     if unlabeled_file.exists():
         return pd.read_csv(unlabeled_file)
     else:
-        print(f"⚠️  No unlabeled pool found at {unlabeled_file}")
+        print(f"WARNING:  No unlabeled pool found at {unlabeled_file}")
         print("   Create one by exporting transactions without labels.")
         return pd.DataFrame()
 
@@ -48,7 +48,7 @@ def get_predictions(
         pipeline_path = Path(__file__).parent.parent / "data" / "ml" / "baseline_pipeline.pkl"
     
     if not pipeline_path.exists():
-        print(f"❌ Pipeline not found at {pipeline_path}")
+        print(f"ERROR: Pipeline not found at {pipeline_path}")
         print("   Run: python tools/train_ml_baseline.py")
         return None
     
@@ -94,11 +94,11 @@ def main():
     print("=" * 80)
     
     # Load unlabeled pool
-    print("\n📋 Loading unlabeled pool...")
+    print("\nDATA: Loading unlabeled pool...")
     pool_df = load_unlabeled_pool()
     
     if len(pool_df) == 0:
-        print("\n⚠️  No unlabeled pool available.")
+        print("\nWARNING:  No unlabeled pool available.")
         print("\nToDemo mode: Using test set as unlabeled pool")
         test_path = Path(__file__).parent.parent / "data" / "ml" / "ml_test.csv"
         if test_path.exists():
@@ -118,11 +118,11 @@ def main():
         return 1
     
     # Compute embeddings
-    print("\n🔢 Computing embeddings...")
+    print("\nEMBED: Computing embeddings...")
     emb, _ = embeddings.embed_dataset(pool_df)
     
     # Apply active learning
-    print(f"\n🎯 Selecting {args.n} samples with {args.strategy}...")
+    print(f"\nSELECT: Selecting {args.n} samples with {args.strategy}...")
     labeled_mask = np.zeros(len(pool_df), dtype=bool)  # All unlabeled in this demo
     
     selected_idx, summary = active_learning.select_for_labeling(
@@ -135,7 +135,7 @@ def main():
     )
     
     # Create output
-    print(f"\n✅ Selected {len(selected_idx)} samples")
+    print(f"\nOK: Selected {len(selected_idx)} samples")
     
     output_df = pool_df.iloc[selected_idx].copy()
     output_df["max_prob"] = summary["max_prob"].values
@@ -146,7 +146,7 @@ def main():
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_df.to_csv(output_path, index=False)
     
-    print(f"\n💾 Saved to {output_path}")
+    print(f"\nSAVE: Saved to {output_path}")
     print(f"\nTop 10 to label (highest uncertainty first):")
     print(output_df[["text", "max_prob", "entropy"]].head(10).to_string())
     

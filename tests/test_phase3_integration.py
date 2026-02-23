@@ -57,7 +57,7 @@ def test_merchant_normalization():
         logger.info(f"  {raw:40} → {clean:20} (brand: {brand})")
         assert brand == expected_brand, f"Expected {expected_brand}, got {brand}"
     
-    logger.info("✅ Merchant normalization: PASS")
+    logger.info("OK: Merchant normalization: PASS")
 
 
 def test_embeddings():
@@ -90,9 +90,9 @@ def test_embeddings():
         
         assert sim_01 > sim_02, "Starbucks should be more similar to Starbucks than McDonald's"
         
-        logger.info("✅ SBERT embeddings: PASS")
+        logger.info("OK: SBERT embeddings: PASS")
     except ImportError:
-        logger.warning("❌ sentence-transformers not installed, skipping SBERT test")
+        logger.warning("ERROR: sentence-transformers not installed, skipping SBERT test")
         return
 
 
@@ -132,7 +132,7 @@ def test_active_learning():
         logger.info(f"  {strategy:12} → Selected {len(selected_idx)} samples")
         logger.info(f"    Top 3 indices: {selected_idx[:3]}")
     
-    logger.info("✅ Active learning: PASS")
+    logger.info("OK: Active learning: PASS")
 
 
 def test_gold_dataset():
@@ -144,7 +144,7 @@ def test_gold_dataset():
     gold_path = Path(__file__).parent.parent / "data" / "gold" / "gold_transactions.jsonl"
     
     if not gold_path.exists():
-        logger.warning(f"⚠️  Gold dataset not found at {gold_path}")
+        logger.warning(f"WARNING:  Gold dataset not found at {gold_path}")
         return
     
     gold_records = data_prep.load_gold_set(gold_path)
@@ -160,7 +160,7 @@ def test_gold_dataset():
     
     if len(df) > 0:
         logger.info(f"  Categories: {df['category'].unique()}")
-    logger.info("✅ Gold dataset: PASS")
+    logger.info("OK: Gold dataset: PASS")
 
 
 def test_baseline_training():
@@ -191,14 +191,14 @@ def test_baseline_training():
     # Train
     pipeline, metrics = train_baseline.train_baseline(train_df, val_df)
     
-    logger.info(f"  Train records: {metrics.get('train_records', '?')}")
-    logger.info(f"  Val accuracy: {metrics.get('val_accuracy', '?')}")
+    logger.info(f"  Train records: {metrics.get('train_records', 'WARNING:')}")
+    logger.info(f"  Val accuracy: {metrics.get('val_accuracy', 'WARNING:')}")
     
     # Predict
     preds = pipeline.predict(val_df["text"])
     logger.info(f"  Predictions: {preds}")
     
-    logger.info("✅ TF-IDF baseline: PASS")
+    logger.info("OK: TF-IDF baseline: PASS")
 
 
 def test_sbert_training():
@@ -229,21 +229,21 @@ def test_sbert_training():
         )
         
         logger.info(f"  Train accuracy: {metrics['train_acc']:.3f}")
-        logger.info(f"  Val accuracy: {metrics.get('val_acc', '?')}")
+        logger.info(f"  Val accuracy: {metrics.get('val_acc', 'WARNING:')}")
         
         # Predict
         preds = pipeline.predict(X_val)
         logger.info(f"  Predictions: {preds}")
         
-        logger.info("✅ SBERT classifier: PASS")
+        logger.info("OK: SBERT classifier: PASS")
     except ImportError:
-        logger.warning("❌ sentence-transformers not installed, skipping SBERT test")
+        logger.warning("ERROR: sentence-transformers not installed, skipping SBERT test")
 
 
 def main():
-    logger.info("\n\n" + "▓" * 80)
+    logger.info("\n\n" + "=" * 80)
     logger.info("PHASE 3 INTEGRATION TEST SUITE")
-    logger.info("▓" * 80)
+    logger.info("=" * 80)
     
     try:
         test_merchant_normalization()
@@ -253,12 +253,12 @@ def main():
         test_baseline_training()
         test_sbert_training()
         
-        logger.info("\n\n" + "▓" * 80)
-        logger.info("✅ ALL TESTS PASSED")
-        logger.info("▓" * 80)
+        logger.info("\n\n" + "=" * 80)
+        logger.info("OK: ALL TESTS PASSED")
+        logger.info("=" * 80)
         return 0
     except Exception as e:
-        logger.error(f"\n❌ TEST FAILED: {e}")
+        logger.error(f"\nERROR: TEST FAILED: {e}")
         import traceback
         traceback.print_exc()
         return 1

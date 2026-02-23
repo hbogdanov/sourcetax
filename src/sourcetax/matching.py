@@ -152,8 +152,8 @@ def match_all_receipts(db_path: str = "data/store.db") -> int:
         if match_id:
             cur.execute("""
                 UPDATE canonical_records
-                SET matched_transaction_id = ?, match_score = ?
-                WHERE id = ?
+                SET matched_transaction_id = WARNING:, match_score = WARNING:
+                WHERE id = WARNING:
             """, (match_id, match_score, receipt["id"]))
             matched_count += 1
     

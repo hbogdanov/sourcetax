@@ -75,10 +75,10 @@ def train_baseline(
     Returns:
         (pipeline, metrics_dict)
     """
-    print("🔨 Building pipeline...")
+    print("BUILD: Building pipeline...")
     pipeline = build_pipeline()
     
-    print("📚 Training on {} records...".format(len(train_df)))
+    print("TRAIN: Training on {} records...".format(len(train_df)))
     pipeline.fit(train_df["text"], train_df["category"])
     
     metrics = {
@@ -88,7 +88,7 @@ def train_baseline(
     
     # Validation metrics (if provided)
     if val_df is not None:
-        print("📊 Evaluating on validation set...")
+        print("METRICS: Evaluating on validation set...")
         y_pred = pipeline.predict(val_df["text"])
         y_true = val_df["category"]
         
@@ -126,13 +126,13 @@ def save_pipeline(
     with open(output_path, "wb") as f:
         pickle.dump(pipeline, f)
     
-    print(f"✅ Pipeline saved to {output_path}")
+    print(f"OK: Pipeline saved to {output_path}")
     return output_path
 
 
 def main():
     """Train and save baseline model."""
-    print("📖 Loading splits...")
+    print("LOAD: Loading splits...")
     train_df, val_df = load_train_val()
     
     print(f"   Train: {len(train_df)} records")
@@ -141,10 +141,10 @@ def main():
     print("\n🤖 Training baseline...")
     pipeline, metrics = train_baseline(train_df, val_df)
     
-    print("\n💾 Saving pipeline...")
+    print("\nSAVE: Saving pipeline...")
     save_pipeline(pipeline)
     
-    print("\n📈 Baseline Metrics:")
+    print("\nUP Baseline Metrics:")
     for key, value in metrics.items():
         if isinstance(value, float):
             print(f"   {key}: {value:.1%}")

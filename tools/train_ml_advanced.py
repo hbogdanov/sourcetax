@@ -14,11 +14,11 @@ Usage:
     python tools/train_ml_advanced.py [--strategy sbert|hierarchical|all]
 
 Example output:
-    ✅ Loaded 10 gold records (train: 7, val: 1, test: 2)
-    ✅ TF-IDF baseline: 50% accuracy
-    ✅ SBERT classifier: 86% accuracy
-    ✅ Hierarchical: 100% major, 85% sub
-    ✅ Saved visualizations to data/ml/evaluation_report/
+    OK: Loaded 10 gold records (train: 7, val: 1, test: 2)
+    OK: TF-IDF baseline: 50% accuracy
+    OK: SBERT classifier: 86% accuracy
+    OK: Hierarchical: 100% major, 85% sub
+    OK: Saved visualizations to data/ml/evaluation_report/
 """
 
 import sys
@@ -57,7 +57,7 @@ def load_and_prepare_data(data_dir: Path = None):
     logger.info("PHASE 3: ADVANCED ML TRAINING")
     logger.info("=" * 80)
     
-    logger.info("\n📋 Loading data...")
+    logger.info("\nDATA: Loading data...")
     
     # Load gold dataset
     gold_path = data_dir.parent / "gold" / "gold_transactions.jsonl"
@@ -66,7 +66,7 @@ def load_and_prepare_data(data_dir: Path = None):
         return None
     
     df_gold = data_prep.load_gold_dataset(gold_path)
-    logger.info(f"✅ Loaded {len(df_gold)} gold records")
+    logger.info(f"OK: Loaded {len(df_gold)} gold records")
     
     # Load split metadata
     split_metadata_path = data_dir / "split_metadata.txt"
@@ -86,7 +86,7 @@ def load_and_prepare_data(data_dir: Path = None):
         # Will create splits below
         return df_gold, None
     
-    logger.info(f"✅ Train: {len(splits['train'])}, Val: {len(splits['val'])}, Test: {len(splits['test'])}")
+    logger.info(f"OK: Train: {len(splits['train'])}, Val: {len(splits['val'])}, Test: {len(splits['test'])}")
     
     return df_gold, splits
 
@@ -151,16 +151,16 @@ def main():
         y_val = splits["val"]["category_encoded"].values
         y_test = splits["test"]["category_encoded"].values
     
-    logger.info(f"\n📊 Data splits: train={len(X_train)}, val={len(X_val)}, test={len(X_test)}")
+    logger.info(f"\nMETRICS: Data splits: train={len(X_train)}, val={len(X_val)}, test={len(X_test)}")
     
     # Train baseline (TF-IDF)
-    logger.info("\n🚀 Training TF-IDF baseline...")
+    logger.info("\nNEXT: Training TF-IDF baseline...")
     try:
         tfidf_clf, tfidf_metrics = train_baseline.train_tfidf_classifier(
             X_train, y_train, X_val, y_val
         )
-        logger.info(f"✅ TF-IDF: train_acc={tfidf_metrics['train_acc']:.3f}, "
-                    f"val_acc={tfidf_metrics.get('val_acc', '?')}")
+        logger.info(f"OK: TF-IDF: train_acc={tfidf_metrics['train_acc']:.3f}, "
+                    f"val_acc={tfidf_metrics.get('val_acc', 'WARNING:')}")
         
         # Test predictions
         tfidf_test_pred = tfidf_clf.predict(X_test)
@@ -174,13 +174,13 @@ def main():
     # Train SBERT (if requested)
     sbert_test_pred = None
     if args.strategy in ["sbert", "all"]:
-        logger.info("\n🔢 Training SBERT-based classifier...")
+        logger.info("\nEMBED: Training SBERT-based classifier...")
         try:
             sbert_clf, sbert_metrics = train_sbert.train_sbert_classifier(
                 X_train, y_train, X_val, y_val
             )
-            logger.info(f"✅ SBERT: train_acc={sbert_metrics['train_acc']:.3f}, "
-                        f"val_acc={sbert_metrics.get('val_acc', '?')}")
+            logger.info(f"OK: SBERT: train_acc={sbert_metrics['train_acc']:.3f}, "
+                        f"val_acc={sbert_metrics.get('val_acc', 'WARNING:')}")
             
             # Test predictions
             sbert_test_pred = sbert_clf.predict(X_test)
@@ -191,7 +191,7 @@ def main():
             sbert_path = Path("data/ml/sbert_pipeline.pkl")
             with open(sbert_path, "wb") as f:
                 pickle.dump(sbert_clf, f)
-            logger.info(f"💾 Saved SBERT pipeline to {sbert_path}")
+            logger.info(f"SAVE: Saved SBERT pipeline to {sbert_path}")
         except ImportError:
             logger.warning("sentence-transformers not installed. Install with:")
             logger.warning("  pip install sentence-transformers")
@@ -200,7 +200,7 @@ def main():
     
     # Train hierarchical (if requested)
     if args.strategy in ["hierarchical", "all"]:
-        logger.info("\n🏛️  Training hierarchical classifier...")
+        logger.info("\nHIER:  Training hierarchical classifier...")
         
         # For demo, create synthetic major/sub labels
         # In practice, these come from training data
@@ -223,7 +223,7 @@ def main():
                 major_trainer_fn=train_baseline.train_tfidf_classifier,
                 sub_trainer_fn=train_baseline.train_tfidf_classifier,
             )
-            logger.info(f"✅ Hierarchical classifier trained")
+            logger.info(f"OK: Hierarchical classifier trained")
             
             # Evaluate
             if len(X_test) > 0:
@@ -236,7 +236,7 @@ def main():
             logger.error(f"Hierarchical training failed: {e}")
     
     # Generate visualizations
-    logger.info("\n📈 Generating visualizations...")
+    logger.info("\nUP Generating visualizations...")
     
     predictions = {}
     if tfidf_test_pred is not None:
@@ -255,8 +255,8 @@ def main():
             label_names,
             Path(args.output_dir)
         )
-        logger.info(f"✅ Visualizations saved to {args.output_dir}")
-        logger.info(f"   Report index: {report_paths.get('index', '?')}")
+        logger.info(f"OK: Visualizations saved to {args.output_dir}")
+        logger.info(f"   Report index: {report_paths.get('index', 'WARNING:')}")
     
     logger.info("\n" + "=" * 80)
     logger.info("PHASE 3: COMPLETE")

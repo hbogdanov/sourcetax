@@ -160,8 +160,8 @@ def eval_matching_accuracy(gold_records: List[Dict]) -> Tuple[float, float, floa
     """
     Evaluate receipt-to-bank matching.
     
-    Precision: of predicted matches, how many are correct?
-    Recall: of actual matches, how many did we find?
+    Precision: of predicted matches, how many are correctWARNING:
+    Recall: of actual matches, how many did we findWARNING:
     Returns: precision, recall, F1
     """
     # Separate receipts and bank transactions
@@ -276,19 +276,19 @@ def print_eval_report(metrics: EvalMetrics) -> None:
     print("SOURCETAX EVALUATION REPORT")
     print("=" * 70)
     
-    print("\n📊 CATEGORIZATION")
+    print("\nMETRICS: CATEGORIZATION")
     print(f"  Overall Accuracy: {metrics.category_accuracy:.1%}")
     if metrics.category_precision_by_group:
         print("  By Category:")
         for cat, prec in sorted(metrics.category_precision_by_group.items()):
             print(f"    {cat:30s} {prec:6.1%}")
     
-    print("\n🔗 RECEIPT-TO-TRANSACTION MATCHING")
-    print(f"  Precision: {metrics.match_precision:.1%}  (of predicted matches, correct?)")
-    print(f"  Recall:    {metrics.match_recall:.1%}  (of actual matches, found?)")
+    print("\nMATCHING: RECEIPT-TO-TRANSACTION MATCHING")
+    print(f"  Precision: {metrics.match_precision:.1%}  (of predicted matches, correctWARNING:)")
+    print(f"  Recall:    {metrics.match_recall:.1%}  (of actual matches, foundWARNING:)")
     print(f"  F1 Score:  {metrics.match_f1:.1%}")
     
-    print("\n📸 OCR EXTRACTION (Receipts Only)")
+    print("\nOCR: OCR EXTRACTION (Receipts Only)")
     print(f"  Merchant: {metrics.extraction_merchant_accuracy:.1%}")
     print(f"  Date:     {metrics.extraction_date_accuracy:.1%}")
     print(f"  Amount:   {metrics.extraction_amount_accuracy:.1%}")
@@ -301,10 +301,10 @@ def main():
     gold_records = load_gold_set()
     
     if not gold_records:
-        print("⚠️  No gold dataset found. Create data/gold/gold_transactions.jsonl")
+        print("WARNING:  No gold dataset found. Create data/gold/gold_transactions.jsonl")
         return
     
-    print(f"📈 Evaluating on {len(gold_records)} gold records...")
+    print(f"UP Evaluating on {len(gold_records)} gold records...")
     
     # Run evaluations
     cat_acc, cat_by_group = eval_category_accuracy(gold_records)
