@@ -1,4 +1,5 @@
 from sourcetax import ingest, matching, receipts
+from sourcetax.normalization import normalize_merchant
 
 
 def test_normalize_to_canonical_bank_record():
@@ -19,8 +20,9 @@ def test_normalize_to_canonical_bank_record():
 
 
 def test_matching_normalize_merchant_uses_shared_rules():
-    assert matching.normalize_merchant("AMZN MKTP MERCHANT LLC") == "amazon"
-    assert matching.normalize_merchant("SQ *STARBUCKS COFFEE 123 SF CA") == "starbucks"
+    assert normalize_merchant("AMZN MKTP MERCHANT LLC") == "amazon"
+    assert normalize_merchant("SQ *STARBUCKS COFFEE 123 SF CA") == "starbucks"
+    assert matching.normalize_merchant("AMZN MKTP MERCHANT LLC") == normalize_merchant("AMZN MKTP MERCHANT LLC")
 
 
 def test_receipt_parsing_extracts_structured_fields():

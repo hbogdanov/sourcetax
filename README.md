@@ -50,6 +50,18 @@ pip install -e ".[embeddings]"
 pip install -e ".[ocr]"
 ```
 
+### Demo-safe Commands
+
+```bash
+make setup
+make smoke
+make phase4
+make test
+```
+
+`make smoke` runs a lightweight end-to-end flow and best-effort evaluation without requiring EasyOCR or SBERT.
+`make phase4` exports accounting-grade artifacts and reconciliation queues from `data/store.db`.
+
 ### Run Demo
 
 ```bash
@@ -59,6 +71,12 @@ python tools/generate_reports.py
 # Lightweight one-command smoke test (ingest -> match -> categorize -> export)
 # Does not require EasyOCR.
 python tools/smoke_run.py
+
+# Phase 3 benchmark report (rules vs TF-IDF vs ensemble, optional SBERT)
+python tools/phase3_benchmark.py --allow-small
+
+# Phase 4 accounting-grade exports + reconciliation queues
+python tools/phase4_run.py --mock-qbo
 
 # Outputs:
 #   outputs/quickbooks_import.csv     — QB import format

@@ -37,10 +37,12 @@ def confusion_matrix_html(
     from sklearn.metrics import confusion_matrix
     
     # Compute confusion matrix
-    cm = confusion_matrix(y_true, y_pred)
+    cm = confusion_matrix(y_true, y_pred, labels=label_names if label_names is not None else None)
     
     # Normalize by true label (recall)
-    cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    row_sums = cm.sum(axis=1, keepdims=True).astype(float)
+    row_sums[row_sums == 0] = 1.0
+    cm_normalized = cm.astype(float) / row_sums
     
     if label_names is None:
         label_names = [f"Class {i}" for i in range(len(cm))]
@@ -92,7 +94,9 @@ def precision_recall_chart_html(
     """
     from sklearn.metrics import precision_recall_fscore_support
     
-    precision, recall, f1, _ = precision_recall_fscore_support(y_true, y_pred)
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        y_true, y_pred, labels=label_names if label_names is not None else None, zero_division=0
+    )
     
     if label_names is None:
         label_names = [f"Class {i}" for i in range(len(precision))]
@@ -186,9 +190,9 @@ def comparison_table_html(
     
     for model_name, row in df.iterrows():
         html += f"<tr><th>{model_name}</th>"
-        for value in row:
-            # Highlight best value
-            best = df[row.name].max() == value
+        for col, value in row.items():
+            # Highlight column best values.
+            best = pd.to_numeric(df[col], errors="coerce").max() == value
             style = "background-color: lightgreen; font-weight: bold;" if best else ""
             html += f"<td style='{style}'>{value:.3f}</td>"
         html += "</tr>\n"

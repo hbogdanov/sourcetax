@@ -7,17 +7,30 @@ Steps:
  - Run matching (receipt <-> bank)
  - Run categorization (rules)
  - Export QuickBooks CSV
+ - Run evaluation scripts (best effort)
 
 This tool should not import heavy optional deps at module import time.
 """
 import logging
+import os
 from pathlib import Path
 import sys
 import sqlite3
+import subprocess
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from sourcetax import ingest, matching, categorization, exporter, storage
+for stream_name in ("stdout", "stderr"):
+    stream = getattr(sys, stream_name, None)
+    if hasattr(stream, "reconfigure"):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+
+from sourcetax import ingest, matching, categorization, exporter, storage, receipts
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("smoke_run")
@@ -33,6 +46,20 @@ def main():
     if db_path.exists():
         db_path.unlink()
     storage.ensure_db(db_path)
+
+    # Optional lightweight "OCR parse" stage from sample text (no OCR engine needed).
+    try:
+        sample_receipt_text = Path("data/samples/receipt_sample.txt")
+        if sample_receipt_text.exists():
+            parsed = receipts.parse_receipt_text(sample_receipt_text.read_text(encoding="utf-8"))
+            logger.info(
+                "Parsed receipt sample text (optional OCR parse stage): merchant=%s date=%s total=%s",
+                parsed.get("merchant"),
+                parsed.get("date"),
+                parsed.get("total"),
+            )
+    except Exception as e:
+        logger.warning(f"Receipt parse sample skipped: {e}")
 
     # Ingest sample files if present
     n = 0
@@ -78,6 +105,25 @@ def main():
         logger.info(f"Smoke DB records: {total}")
     except Exception as e:
         logger.warning(f"DB verification failed: {e}")
+
+    # Best-effort evaluations. These should not fail the smoke run.
+    for cmd in (
+        [sys.executable, "tools/eval.py"],
+        [sys.executable, "tools/phase3_benchmark.py", "--allow-small"],
+    ):
+        try:
+            logger.info("Running evaluation step: %s", " ".join(cmd[1:]))
+            env = dict(os.environ)
+            env.setdefault("PYTHONIOENCODING", "utf-8")
+            result = subprocess.run(
+                cmd,
+                cwd=Path(__file__).parent.parent,
+                check=False,
+                env=env,
+            )
+            logger.info("Eval step exited with code %s", result.returncode)
+        except Exception as e:
+            logger.warning("Eval step failed to execute (%s): %s", " ".join(cmd[1:]), e)
 
     logger.info("Smoke run complete")
 

@@ -8,7 +8,7 @@ import sqlite3
 from typing import Optional, List, Dict, Tuple
 from datetime import datetime
 import difflib
-from .normalization import normalize_merchant_name
+from .normalization import normalize_merchant as shared_normalize_merchant
 
 
 def normalize_merchant(merchant: str) -> str:
@@ -17,7 +17,7 @@ def normalize_merchant(merchant: str) -> str:
     Delegates to the shared normalization helper to ensure consistent behavior
     across the codebase.
     """
-    return normalize_merchant_name(merchant, case="lower")
+    return shared_normalize_merchant(merchant, case="lower")
 
 
 def date_closeness_score(date1: str, date2: str, max_days: int = 3) -> float:
