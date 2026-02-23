@@ -19,7 +19,7 @@ import json
 import sys
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from sourcetax import matching, storage, categorization
+from sourcetax import matching, storage, categorization, exporter
 
 
 st.set_page_config(page_title="SourceTax Review", layout="wide")
@@ -27,6 +27,8 @@ st.title("📋 SourceTax Transaction Review")
 
 # Database path
 DB_PATH = "data/store.db"
+GOLD_PATH = "data/gold/gold_transactions.jsonl"
+GOLD_TARGET = 200
 
 
 def fetch_record(record_id: str) -> Optional[Dict]:
@@ -163,6 +165,15 @@ if page == "Dashboard":
         st.metric("Needs Review", stats["unmatched_receipts"] + stats["low_confidence"])
     
     st.divider()
+    gold_count = exporter.count_gold_records(GOLD_PATH)
+    colg1, colg2, colg3 = st.columns(3)
+    with colg1:
+        st.metric("Gold Labels", gold_count)
+    with colg2:
+        st.metric("Gold Target", GOLD_TARGET)
+    with colg3:
+        st.metric("Remaining", max(GOLD_TARGET - gold_count, 0))
+    st.progress(min(gold_count / GOLD_TARGET, 1.0))
     
     col1, col2 = st.columns(2)
     with col1:
@@ -178,6 +189,14 @@ if page == "Dashboard":
                 count = categorization.categorize_all_records(DB_PATH)
             st.success(f"Categorized {count} transactions!")
             st.rerun()
+
+    if st.button("Export reviewed labels to gold_transactions.jsonl"):
+        with st.spinner("Exporting reviewed labels..."):
+            result = exporter.export_gold_transactions_jsonl(DB_PATH, GOLD_PATH, append=True)
+        st.success(
+            f"Exported {result['exported']} records (skipped {result['skipped_existing']} existing). "
+            f"Gold set total: {result['total_after']}"
+        )
 
 # ===== UNMATCHED RECEIPTS =====
 elif page == "Unmatched Receipts":

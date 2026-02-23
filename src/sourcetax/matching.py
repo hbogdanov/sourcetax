@@ -5,23 +5,19 @@ Phase 2.2: Auto-link receipts to bank transactions with confidence scores.
 """
 
 import sqlite3
-from pathlib import Path
 from typing import Optional, List, Dict, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime
 import difflib
+from .normalization import normalize_merchant as shared_normalize_merchant
 
 
 def normalize_merchant(merchant: str) -> str:
-    """Normalize merchant name for fuzzy matching."""
-    if not merchant:
-        return ""
-    # Lowercase, strip punctuation & numbers
-    normalized = merchant.lower()
-    for char in ".,;:'\"!@#$%^&*()[]{}":
-        normalized = normalized.replace(char, "")
-    # Remove numbers
-    normalized = "".join(c for c in normalized if not c.isdigit())
-    return " ".join(normalized.split())
+    """Normalize merchant name for fuzzy matching.
+
+    Delegates to the shared normalization helper to ensure consistent behavior
+    across the codebase.
+    """
+    return shared_normalize_merchant(merchant, case="lower")
 
 
 def date_closeness_score(date1: str, date2: str, max_days: int = 3) -> float:

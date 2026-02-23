@@ -38,8 +38,8 @@ from sourcetax.models import (
     train_sbert,
     hierarchical,
     visualize,
-    merchant_normalizer,
 )
+from sourcetax.normalization import normalize_merchant
 
 logging.basicConfig(
     level=logging.INFO,
@@ -99,8 +99,7 @@ def prepare_texts(df: pd.DataFrame) -> list:
         description = str(row.get("description", ""))
         
         # Normalize merchant
-        norm_result = merchant_normalizer.normalize_merchant(merchant)
-        merchant_clean = norm_result[0]  # Extract clean merchant
+        merchant_clean = normalize_merchant(merchant, case="preserve")
         
         # Combine
         text = f"{merchant_clean} [SEP] {description}".strip()

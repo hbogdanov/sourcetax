@@ -42,13 +42,41 @@ pip install -e ".[dev]"
 
 # For enhanced matching (optional, recommended)
 pip install -e ".[matching]"
+
+# Optional ML embeddings (sentence-transformers + torch)
+pip install -e ".[embeddings]"
+
+# Optional OCR backend (EasyOCR + pinned torch/torchvision)
+pip install -e ".[ocr]"
 ```
+
+### Demo-safe Commands
+
+```bash
+make setup
+make smoke
+make phase4
+make test
+```
+
+`make smoke` runs a lightweight end-to-end flow and best-effort evaluation without requiring EasyOCR or SBERT.
+`make phase4` exports accounting-grade artifacts and reconciliation queues from `data/store.db`.
 
 ### Run Demo
 
 ```bash
 # Full end-to-end: ingest samples, match receipts, categorize, export
 python tools/generate_reports.py
+
+# Lightweight one-command smoke test (ingest -> match -> categorize -> export)
+# Does not require EasyOCR.
+python tools/smoke_run.py
+
+# Phase 3 benchmark report (rules vs TF-IDF vs ensemble, optional SBERT)
+python tools/phase3_benchmark.py --allow-small
+
+# Phase 4 accounting-grade exports + reconciliation queues
+python tools/phase4_run.py --mock-qbo
 
 # Outputs:
 #   outputs/quickbooks_import.csv     — QB import format
@@ -65,6 +93,7 @@ streamlit run app_review.py
 # Opens http://localhost:8501
 # Features:
 #   - Dashboard: metrics, auto-match/categorize buttons
+#   - Dashboard: gold set progress (target 200) + export reviewed labels button
 #   - Unmatched receipts/transactions: review and link
 #   - Category override: change predictions and save overrides
 ```
@@ -360,7 +389,7 @@ python tools/eval.py
 - **Matching Precision/Recall:** Receipt→bank matching performance
 - **Extraction Accuracy:** Merchant, date, amount OCR correctness
 
-Before Phase 3 ML work, expand gold dataset to ~200 records using `app_review.py` (mark good matches, override categories, save). This becomes your evaluation set.
+Before Phase 3 ML work, expand the gold dataset to ~200 records using `app_review.py` (mark good matches, override categories, save), then use the Dashboard button to export reviewed labels to `data/gold/gold_transactions.jsonl`.
 
 ## Phase 3 — ML Categorization & Advanced Features
 

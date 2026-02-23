@@ -8,6 +8,7 @@ import sqlite3
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 import csv
+from .normalization import normalize_merchant_name
 
 
 # Keyword rules: merchant substring → (category, confidence)
@@ -58,7 +59,7 @@ def load_merchant_category_map(path: str = "data/mappings/merchant_category.csv"
         with p.open(newline="") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                merchant = row.get("merchant", "").strip().upper()
+                merchant = normalize_merchant_name(row.get("merchant", ""), case="upper")
                 # Read category_name (human-readable) for exports
                 category = row.get("category_name", "").strip()
                 if merchant and category:
@@ -74,7 +75,7 @@ def categorize_by_merchant_exact(merchant: str, merchant_map: Dict[str, str]) ->
     if not merchant:
         return None
     
-    merchant_norm = merchant.strip().upper()
+    merchant_norm = normalize_merchant_name(merchant, case="upper")
     category = merchant_map.get(merchant_norm)
     
     if category:
@@ -88,7 +89,7 @@ def categorize_by_merchant_fuzzy(merchant: str, merchant_map: Dict[str, str]) ->
     if not merchant:
         return None
     
-    merchant_norm = merchant.strip().upper()
+    merchant_norm = normalize_merchant_name(merchant, case="upper")
     
     # Check if merchant is substring of known merchant
     for known_merchant, category in merchant_map.items():
@@ -103,7 +104,7 @@ def categorize_by_keywords(merchant: str) -> Optional[Tuple[str, float]]:
     if not merchant:
         return None
     
-    merchant_upper = merchant.upper()
+    merchant_upper = normalize_merchant_name(merchant, case="upper") or merchant.upper()
     
     for keyword, (category, confidence) in KEYWORD_RULES.items():
         if keyword in merchant_upper:
@@ -117,28 +118,31 @@ def get_learned_override(merchant: str, db_path: str = "data/store.db") -> Optio
     if not merchant:
         return None
     
+    merchant_raw_key = normalize_merchant_name(merchant, case="upper")
+    merchant_norm_key = normalize_merchant_name(merchant, case="lower")
+
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    
-    merchant_norm = merchant.strip().upper()
-    
-    cur.execute(
-        """
-        SELECT category_final FROM canonical_records
-        WHERE merchant_raw IS NOT NULL
-        AND UPPER(TRIM(merchant_raw)) = ?
-        AND category_final IS NOT NULL
-        LIMIT 1
-        """,
-        (merchant_norm,),
-    )
-    
-    result = cur.fetchone()
-    conn.close()
-    
+    try:
+        cur.execute(
+            """
+            SELECT category_final FROM canonical_records
+            WHERE category_final IS NOT NULL
+              AND (
+                    merchant_norm = ?
+                    OR UPPER(TRIM(merchant_raw)) = ?
+                  )
+            LIMIT 1
+            """,
+            (merchant_norm_key, merchant_raw_key),
+        )
+        result = cur.fetchone()
+    finally:
+        conn.close()
+
     if result:
         return (result[0], 0.99)  # Learned overrides have highest confidence
-    
+
     return None
 
 
