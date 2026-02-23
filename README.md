@@ -1,4 +1,4 @@
-﻿# SourceTax â€” Transaction Classification & Tax Automation
+# SourceTax — Transaction Classification & Tax Automation
 
 An AI-driven pipeline that ingests transaction data from banks, POS systems, and receipt images, then normalizes, extracts, categorizes, and exports to QuickBooks and Schedule C tax forms.
 
@@ -120,9 +120,9 @@ python tools/phase4_run.py --mock-qbo
 # Outputs:
 #   reports/phase3_eval.md            - benchmark summary (rules vs TF-IDF vs ensemble)
 #   reports/phase3_eval_assets/*      - confusion matrices, per-category metrics, needs_review.csv
-#   outputs/quickbooks_import.csv     â€” QB import format
-#   outputs/schedule_c_totals.csv     â€” Schedule C category breakdown
-#   outputs/audit_pack.csv            â€” full transaction trail with confidence
+#   outputs/quickbooks_import.csv     — QB import format
+#   outputs/schedule_c_totals.csv     — Schedule C category breakdown
+#   outputs/audit_pack.csv            — full transaction trail with confidence
 ```
 
 ### Launch Review UI
@@ -152,13 +152,13 @@ A modular, staged pipeline:
 3. **Store** (`src/sourcetax/storage.py`)  
    Persist canonical records to SQLite for querying and iteration.
 
-4. **Extract** (`src/sourcetax/receipts.py` â€” Phase 2)  
+4. **Extract** (`src/sourcetax/receipts.py` — Phase 2)  
    OCR receipt images (Tesseract/EasyOCR), parse fields (date, merchant, total, tax).
 
-5. **Match** (`src/sourcetax/matching.py` â€” Phase 2)  
+5. **Match** (`src/sourcetax/matching.py` — Phase 2)  
    Link receipt documents to bank transactions with fuzzy matching.
 
-6. **Categorize** (`src/sourcetax/categorization.py` â€” Phase 2)  
+6. **Categorize** (`src/sourcetax/categorization.py` — Phase 2)  
    Rules-based classification (merchant exact/fuzzy match, keywords, user overrides).
 
 7. **Export** (`src/sourcetax/exporter.py`)  
@@ -166,7 +166,7 @@ A modular, staged pipeline:
 
 ## Phase Completion Status
 
-### Phase 0 â€” âœ… Complete
+### Phase 0 — ✅ Complete
 
 **Foundation:** Canonical schema, sample data, basic CSV ingestion, SQLite storage.
 
@@ -177,7 +177,7 @@ A modular, staged pipeline:
 - CSV ingestors for toast, bank, quickbooks
 - SQLite schema and basic I/O
 
-### Phase 1 â€” âœ… Complete (phase1 branch)
+### Phase 1 — ✅ Complete (phase1 branch)
 
 **Schema & Cleanup:** Enhanced canonical schema, fixed encoding, code formatting, repo hygiene.
 
@@ -187,41 +187,41 @@ A modular, staged pipeline:
 - Updated .gitignore to exclude large artifacts
 - All tests pass, demo works deterministically
 
-### Phase 2 â€” âœ… Complete (phase2 branch)
+### Phase 2 — ✅ Complete (phase2 branch)
 
 **Receipt Extraction, Matching, Categorization, Review UI.**
 
-**Phase 2.1 â€” Receipt OCR:**
-- `src/sourcetax/receipts.py` â€” Tesseract/EasyOCR integration
+**Phase 2.1 — Receipt OCR:**
+- `src/sourcetax/receipts.py` — Tesseract/EasyOCR integration
 - Field extraction: date, merchant, total, tax, tip
 - Heuristic-based (regex + keyword search)
 
-**Phase 2.2 â€” Transaction Matching:**
-- `src/sourcetax/matching.py` â€” Receipt â†” bank fuzzy matching
+**Phase 2.2 — Transaction Matching:**
+- `src/sourcetax/matching.py` — Receipt ↔ bank fuzzy matching
 - Scoring: date (Â±3d), amount (Â±$10), merchant (>80% similarity)
 - `list_unmatched_receipts()`, `list_unmatched_transactions()` for UI
 
-**Phase 2.3 â€” Categorization Rules Engine:**
-- `src/sourcetax/categorization.py` â€” Priority rules (learned > exact > fuzzy > keywords)
-- Keyword rules: UBERâ†’Travel, STARBUCKSâ†’Meals, HOME DEPOTâ†’Supplies, etc.
+**Phase 2.3 — Categorization Rules Engine:**
+- `src/sourcetax/categorization.py` — Priority rules (learned > exact > fuzzy > keywords)
+- Keyword rules: UBER→Travel, STARBUCKS→Meals, HOME DEPOT→Supplies, etc.
 - Learned overrides: user sets merchant category once, applies to all
 
-**Phase 2.4 â€” Exports & Audit:**
+**Phase 2.4 — Exports & Audit:**
 - QB CSV uses `category_final` (user overrides)
 - Schedule C totals by category
 - Audit pack: full record trail with match scores + confidence
 - Metrics export: record counts, expense totals, match rates
 
 **UI:**
-- `app_review.py` â€” Streamlit dashboard
+- `app_review.py` — Streamlit dashboard
   - Dashboard: metrics, auto-match/auto-categorize buttons
   - Unmatched receipts: list + detail view with OCR excerpt
   - Unmatched transactions: identify orphans
   - Match review: approve matches, override categories, save
-- `src/sourcetax/taxonomy.py` â€” category and merchant mapping helpers
-- `data/samples/` â€” real-like export examples
-- `data/forms/funsd/` â€” FUNSD dataset (149 forms + images)
-- `data/combined_dataset/combined_samples.jsonl` â€” unified training/dev dataset
+- `src/sourcetax/taxonomy.py` — category and merchant mapping helpers
+- `data/samples/` — real-like export examples
+- `data/forms/funsd/` — FUNSD dataset (149 forms + images)
+- `data/combined_dataset/combined_samples.jsonl` — unified training/dev dataset
 
 **To regenerate samples or combined dataset:**
 ```bash
@@ -285,8 +285,8 @@ exporter.compute_schedule_c_totals(records)
 - **CORD** receipts: `data/samples/cord/` (subset used in Phase 2 evaluation)
 
 **Taxonomy & Mappings:**
-- `data/taxonomy/schedule_c_taxonomy.json` â€” Schedule C category hierarchy
-- `data/mappings/merchant_category.csv` â€” merchant â†’ category rules (format: merchant,category_code,category_name,notes)
+- `data/taxonomy/schedule_c_taxonomy.json` — Schedule C category hierarchy
+- `data/mappings/merchant_category.csv` — merchant → category rules (format: merchant,category_code,category_name,notes)
 
 ## API Documentation
 
@@ -302,110 +302,110 @@ exporter.compute_schedule_c_totals(records)
 
 **Schema Invariants (locked for Phase 3 ML):**
 - **Direction:** Always "expense" (amount positive) or "income" (amount negative). Sign is implicit in direction, not amount.
-- **Merchant normalization:** Use `normalize_merchant(text)` consistently. Examples: "STARBUCKS COFFEE 123" â†’ "Starbucks", "UBER TRIP" â†’ "Uber".
+- **Merchant normalization:** Use `normalize_merchant(text)` consistently. Examples: "STARBUCKS COFFEE 123" → "Starbucks", "UBER TRIP" → "Uber".
 - **Category coding:** Always populate `category_code` (stable: 'meals', 'travel', 'office', etc.) alongside `category_name` (human-readable: 'Meals and Lodging'). This ensures ML models can use both.
 - **Amounts:** Always store with one convention (expenses positive). Direction field disambiguates, not the sign.
 - **Dates:** ISO 8601 format (YYYY-MM-DD). No timezones. OCR extracts best guess; gold set has ground truth.
-- **Confidence:** Float 0.0â€“1.0. Metrics:
-  - For rules-based categorization: 0.9â€“1.0 (confident)
-  - For fuzzy matches: score of best match (0.0â€“1.0)
+- **Confidence:** Float 0.0–1.0. Metrics:
+  - For rules-based categorization: 0.9–1.0 (confident)
+  - For fuzzy matches: score of best match (0.0–1.0)
   - For ML predictions: probability of predicted class
-- **Match score:** 0.0â€“1.0 if matched_transaction_id is set. Otherwise null.
+- **Match score:** 0.0–1.0 if matched_transaction_id is set. Otherwise null.
 
 **`src/sourcetax/ingest.py`**  
 Key functions:
-- `read_csv(path, source) â†’ Iterator[dict]` â€” Read CSV, yield records
-- `normalize_to_canonical(row, source) â†’ CanonicalRecord` â€” Convert any source to canonical
-- `ingest_and_store(paths, source, db_path)` â€” Read + store to SQLite
+- `read_csv(path, source) → Iterator[dict]` — Read CSV, yield records
+- `normalize_to_canonical(row, source) → CanonicalRecord` — Convert any source to canonical
+- `ingest_and_store(paths, source, db_path)` — Read + store to SQLite
 
 **`src/sourcetax/storage.py`**  
 Key functions:
-- `ensure_db(db_path)` â€” Create schema if not exists
-- `insert_record(record, db_path)` â€” Persist canonical record
-- `get_all_records(db_path) â†’ List[CanonicalRecord]` â€” Retrieve all from database
+- `ensure_db(db_path)` — Create schema if not exists
+- `insert_record(record, db_path)` — Persist canonical record
+- `get_all_records(db_path) → List[CanonicalRecord]` — Retrieve all from database
 
 **`src/sourcetax/receipts.py`** (Phase 2.1)  
 Key functions:
-- `extract_ocr_text(image_path, backend='tesseract') â†’ str` â€” OCR receipt image
-- `parse_receipt_text(text) â†’ dict` â€” Extract date, merchant, total, tax, tip
-- `ingest_receipt_file(image_path, source='receipt') â†’ CanonicalRecord` â€” End-to-end
+- `extract_ocr_text(image_path, backend='tesseract') → str` — OCR receipt image
+- `parse_receipt_text(text) → dict` — Extract date, merchant, total, tax, tip
+- `ingest_receipt_file(image_path, source='receipt') → CanonicalRecord` — End-to-end
 
 **`src/sourcetax/matching.py`** (Phase 2.2)  
 Key functions:
-- `match_receipt_to_bank(receipt, bank_txns) â†’ (score, matched_txn)` â€” Single match
-- `match_all_receipts(records, db_path=None) â†’ List[CanonicalRecord]` â€” Bulk matching
-- `list_unmatched_receipts(records) â†’ List[CanonicalRecord]` â€” Orphan receipts
-- `list_unmatched_transactions(records) â†’ List[CanonicalRecord]` â€” Orphan bank transactions
+- `match_receipt_to_bank(receipt, bank_txns) → (score, matched_txn)` — Single match
+- `match_all_receipts(records, db_path=None) → List[CanonicalRecord]` — Bulk matching
+- `list_unmatched_receipts(records) → List[CanonicalRecord]` — Orphan receipts
+- `list_unmatched_transactions(records) → List[CanonicalRecord]` — Orphan bank transactions
 
 **`src/sourcetax/categorization.py`** (Phase 2.3)  
 Key functions:
-- `categorize_record(record) â†’ CanonicalRecord` â€” Apply rules once
-- `categorize_all_records(records, db_path=None) â†’ List[CanonicalRecord]` â€” Bulk categorization
-- `load_merchant_category_map(csv_path) â†’ dict` â€” Load merchant â†’ category learned overrides
+- `categorize_record(record) → CanonicalRecord` — Apply rules once
+- `categorize_all_records(records, db_path=None) → List[CanonicalRecord]` — Bulk categorization
+- `load_merchant_category_map(csv_path) → dict` — Load merchant → category learned overrides
 
 **`src/sourcetax/exporter.py`** (Phase 2.4)  
 Key functions:
-- `generate_quickbooks_csv(records, output_path)` â€” QB format (uses `category_final`)
-- `compute_schedule_c_totals(records) â†’ dict` â€” By-category breakdown
-- `write_schedule_c_csv(totals, output_path)` â€” SC CSV export
-- `export_audit_pack(records, output_path)` â€” Full detail export
-- `export_metrics(records) â†’ dict` â€” Count, total, match rate, etc.
+- `generate_quickbooks_csv(records, output_path)` — QB format (uses `category_final`)
+- `compute_schedule_c_totals(records) → dict` — By-category breakdown
+- `write_schedule_c_csv(totals, output_path)` — SC CSV export
+- `export_audit_pack(records, output_path)` — Full detail export
+- `export_metrics(records) → dict` — Count, total, match rate, etc.
 
 ## Directory Structure
 
 ```
 sourcetax/
-â”œâ”€â”€ src/sourcetax/           # Core packages
-â”‚   â”œâ”€â”€ __init__.py         # Package marker
-â”‚   â”œâ”€â”€ schema.py           # CanonicalRecord dataclass
-â”‚   â”œâ”€â”€ ingest.py           # Ingestion pipeline (CSV/receipt)
-â”‚   â”œâ”€â”€ storage.py          # SQLite persistence
-â”‚   â”œâ”€â”€ receipts.py         # OCR + field extraction (Phase 2.1)
-â”‚   â”œâ”€â”€ matching.py         # Receiptâ†”bank matching (Phase 2.2)
-â”‚   â”œâ”€â”€ categorization.py   # Rules engine (Phase 2.3)
-â”‚   â”œâ”€â”€ exporter.py         # QB/SC/audit exports (Phase 2.4)
-â”‚   â””â”€â”€ models/             # Phase 3 ML modules
-â”‚       â”œâ”€â”€ __init__.py
-â”‚       â”œâ”€â”€ data_prep.py              # Load splits, stratified sampling
-â”‚       â”œâ”€â”€ train_baseline.py         # TF-IDF + LogisticRegression
-â”‚       â”œâ”€â”€ train_sbert.py            # SBERT embeddings + LR classifier
-â”‚       â”œâ”€â”€ evaluate.py               # Metrics, comparison, error analysis
-â”‚       â”œâ”€â”€ merchant_normalizer.py    # Rule-based merchant cleaning
-â”‚       â”œâ”€â”€ embeddings.py             # SentenceTransformer + caching
-â”‚       â”œâ”€â”€ active_learning.py        # 4 selection strategies
-â”‚       â”œâ”€â”€ hierarchical.py           # Major â†’ subcategory classification
-â”‚       â””â”€â”€ visualize.py              # Confusion matrix, P/R charts, comparison
-â”œâ”€â”€ data/
-â”‚   â”œâ”€â”€ samples/            # Sample data (QB, Toast, Plaid, receipts)
-â”‚   â”œâ”€â”€ forms/funsd/        # FUNSD dataset (149 forms)
-â”‚   â”œâ”€â”€ combined_dataset/   # combined_samples.jsonl
-â”‚   â”œâ”€â”€ gold/               # Hand-labeled evaluation set (10+ records)
-â”‚   â”œâ”€â”€ ml/                 # ML artifacts (splits, pipelines, reports)
-â”‚   â”‚   â”œâ”€â”€ ml_train.csv    # Locked training set
-â”‚   â”‚   â”œâ”€â”€ ml_val.csv      # Validation set
-â”‚   â”‚   â”œâ”€â”€ ml_test.csv     # Test set
-â”‚   â”‚   â”œâ”€â”€ baseline_pipeline.pkl  # TF-IDF trained pipeline
-â”‚   â”‚   â”œâ”€â”€ sbert_pipeline.pkl     # SBERT trained pipeline (if trained)
-â”‚   â”‚   â”œâ”€â”€ evaluation_report/     # Visualizations (HTML)
-â”‚   â”‚   â””â”€â”€ split_metadata.txt     # Stratification info
-â”‚   â”œâ”€â”€ taxonomy/           # Schedule C taxonomy JSON
-â”‚   â”œâ”€â”€ mappings/           # Merchant category mapping CSV
-â”‚   â””â”€â”€ store.db            # SQLite database
-â”œâ”€â”€ outputs/                # Generated exports (QB CSV, Schedule C)
-â”œâ”€â”€ tools/                  # Utility scripts
-â”‚   â”œâ”€â”€ generate_reports.py         # End-to-end demo (runs all phases)
-â”‚   â”œâ”€â”€ generate_training_samples.py
-â”‚   â”œâ”€â”€ convert_funsd_to_combined.py
-â”‚   â”œâ”€â”€ count_combined.py
-â”‚   â”œâ”€â”€ eval.py                    # Evaluation on current pipeline
-â”‚   â”œâ”€â”€ train_ml_baseline.py       # TF-IDF baseline training
-â”‚   â”œâ”€â”€ train_ml_advanced.py       # Advanced ML (SBERT, hierarchical)
-â”‚   â”œâ”€â”€ select_for_labeling.py     # Active learning selection
-â”‚   â””â”€â”€ fetch_public_datasets.py
-â”œâ”€â”€ app_review.py           # Streamlit dashboard UI
-â”œâ”€â”€ tests/                  # Test suite
-â”œâ”€â”€ pyproject.toml          # Package metadata + dependencies
-â””â”€â”€ README.md               # This file
+├── src/sourcetax/           # Core packages
+â”‚   ├── __init__.py         # Package marker
+â”‚   ├── schema.py           # CanonicalRecord dataclass
+â”‚   ├── ingest.py           # Ingestion pipeline (CSV/receipt)
+â”‚   ├── storage.py          # SQLite persistence
+â”‚   ├── receipts.py         # OCR + field extraction (Phase 2.1)
+â”‚   ├── matching.py         # Receipt↔bank matching (Phase 2.2)
+â”‚   ├── categorization.py   # Rules engine (Phase 2.3)
+â”‚   ├── exporter.py         # QB/SC/audit exports (Phase 2.4)
+â”‚   └── models/             # Phase 3 ML modules
+â”‚       ├── __init__.py
+â”‚       ├── data_prep.py              # Load splits, stratified sampling
+â”‚       ├── train_baseline.py         # TF-IDF + LogisticRegression
+â”‚       ├── train_sbert.py            # SBERT embeddings + LR classifier
+â”‚       ├── evaluate.py               # Metrics, comparison, error analysis
+â”‚       ├── merchant_normalizer.py    # Rule-based merchant cleaning
+â”‚       ├── embeddings.py             # SentenceTransformer + caching
+â”‚       ├── active_learning.py        # 4 selection strategies
+â”‚       ├── hierarchical.py           # Major → subcategory classification
+â”‚       └── visualize.py              # Confusion matrix, P/R charts, comparison
+├── data/
+â”‚   ├── samples/            # Sample data (QB, Toast, Plaid, receipts)
+â”‚   ├── forms/funsd/        # FUNSD dataset (149 forms)
+â”‚   ├── combined_dataset/   # combined_samples.jsonl
+â”‚   ├── gold/               # Hand-labeled evaluation set (10+ records)
+â”‚   ├── ml/                 # ML artifacts (splits, pipelines, reports)
+â”‚   â”‚   ├── ml_train.csv    # Locked training set
+â”‚   â”‚   ├── ml_val.csv      # Validation set
+â”‚   â”‚   ├── ml_test.csv     # Test set
+â”‚   â”‚   ├── baseline_pipeline.pkl  # TF-IDF trained pipeline
+â”‚   â”‚   ├── sbert_pipeline.pkl     # SBERT trained pipeline (if trained)
+â”‚   â”‚   ├── evaluation_report/     # Visualizations (HTML)
+â”‚   â”‚   └── split_metadata.txt     # Stratification info
+â”‚   ├── taxonomy/           # Schedule C taxonomy JSON
+â”‚   ├── mappings/           # Merchant category mapping CSV
+â”‚   └── store.db            # SQLite database
+├── outputs/                # Generated exports (QB CSV, Schedule C)
+├── tools/                  # Utility scripts
+â”‚   ├── generate_reports.py         # End-to-end demo (runs all phases)
+â”‚   ├── generate_training_samples.py
+â”‚   ├── convert_funsd_to_combined.py
+â”‚   ├── count_combined.py
+â”‚   ├── eval.py                    # Evaluation on current pipeline
+â”‚   ├── train_ml_baseline.py       # TF-IDF baseline training
+â”‚   ├── train_ml_advanced.py       # Advanced ML (SBERT, hierarchical)
+â”‚   ├── select_for_labeling.py     # Active learning selection
+â”‚   └── fetch_public_datasets.py
+├── app_review.py           # Streamlit dashboard UI
+├── tests/                  # Test suite
+├── pyproject.toml          # Package metadata + dependencies
+└── README.md               # This file
 ```
 
 ## Evaluation
@@ -422,26 +422,26 @@ python tools/eval.py
 **Gold Dataset:**
 - ~10 curated transactions covering major sources (bank, receipt, Toast, QuickBooks)
 - Hand-labeled `category_final` (ground truth)
-- Receiptâ†”bank links for matching evaluation
+- Receipt↔bank links for matching evaluation
 - OCR extraction ground truth (merchant, date, amount)
 
 **Metrics Tracked:**
 - **Categorization Accuracy:** Rules engine + overrides vs. ground truth
-- **Matching Precision/Recall:** Receiptâ†’bank matching performance
+- **Matching Precision/Recall:** Receipt→bank matching performance
 - **Extraction Accuracy:** Merchant, date, amount OCR correctness
 
 Before Phase 3 ML work, expand the gold dataset to ~200 records using `app_review.py` (mark good matches, override categories, save), then use the Dashboard button to export reviewed labels to `data/gold/gold_transactions.jsonl`.
 
-## Phase 3 â€” ML Categorization & Advanced Features
+## Phase 3 — ML Categorization & Advanced Features
 
-**Status:** âœ… Foundation complete. TF-IDF baseline, SBERT embeddings, active learning, and hierarchical classification implemented.
+**Status:** ✅ Foundation complete. TF-IDF baseline, SBERT embeddings, active learning, and hierarchical classification implemented.
 
 ### Phase 3 Foundation (Complete)
 
 **Gold Dataset & Baseline Metrics:**
-- `data/gold/gold_transactions.jsonl` â€” 10 hand-labeled transactions (ground truth)
-- `tools/eval.py` â€” Evaluation script (rules accuracy, per-category metrics)
-- `tools/train_ml_baseline.py` â€” TF-IDF + LogisticRegression pipeline
+- `data/gold/gold_transactions.jsonl` — 10 hand-labeled transactions (ground truth)
+- `tools/eval.py` — Evaluation script (rules accuracy, per-category metrics)
+- `tools/train_ml_baseline.py` — TF-IDF + LogisticRegression pipeline
 - **Locked splits:** `data/ml/ml_train.csv`, `ml_val.csv`, `ml_test.csv` with stratification
 - **TF-IDF Baseline:** ~50% accuracy on test set (small dataset, high variance)
 
@@ -465,7 +465,7 @@ clean, root, brand = merchant_normalizer.normalize_merchant("SQ *STARBUCKS COFFE
 
 **Features:**
 - Removes junk tokens (SQ, POS, merchant codes, state abbreviations, TLDs)
-- Alias mapping: "AMZN" â†’ Amazon, "WHOLEFDS" â†’ Whole Foods, "UBER" â†’ Uber, etc. (25+ mappings)
+- Alias mapping: "AMZN" → Amazon, "WHOLEFDS" → Whole Foods, "UBER" → Uber, etc. (25+ mappings)
 - Root extraction: first N tokens as semantic signal
 - Handles payment platform prefixes (Square, PayPal, Stripe)
 
@@ -486,9 +486,9 @@ X_emb = embeddings.embed_dataset(df[["merchant", "description"]], embedder)
 
 **Benefits:**
 - Captures semantic relationships (not just token overlap)
-- Pre-trained on 1B sentence pairs â†’ generalizes to domain
+- Pre-trained on 1B sentence pairs → generalizes to domain
 - Handles short/noisy merchant names better than TF-IDF
-- 384-dim embeddings + StandardScaler â†’ LogisticRegression
+- 384-dim embeddings + StandardScaler → LogisticRegression
 
 **Dependencies (optional):**
 ```bash
@@ -513,8 +513,8 @@ probabilities = pipeline.predict_proba(X_test)
 ```
 
 **Performance:**
-- Typically 15â€“30% better than TF-IDF on transaction categorization
-- Works well with 50â€“500 labeled examples
+- Typically 15–30% better than TF-IDF on transaction categorization
+- Works well with 50–500 labeled examples
 - Inference: ~10ms per transaction (batch)
 
 #### 4. **Active Learning** (`src/sourcetax/models/active_learning.py`)
@@ -565,7 +565,7 @@ python tools/select_for_labeling.py --strategy diversity --n 50 --output data/ml
 
 #### 6. **Hierarchical Classification** (`src/sourcetax/models/hierarchical.py`)
 
-Two-stage classification: Major category (e.g., "Meals & Entertainment") â†’ Subcategory (e.g., "Coffee", "Restaurant").
+Two-stage classification: Major category (e.g., "Meals & Entertainment") → Subcategory (e.g., "Coffee", "Restaurant").
 
 ```python
 from sourcetax.models import hierarchical
@@ -587,7 +587,7 @@ major_clf, sub_clfs, metrics = hierarchical.train_hierarchical_classifier(
     sub_trainer_fn=train_sbert.train_sbert_classifier,
 )
 
-# Predict: Stage 1 (major) â†’ Stage 2 (subcategory)
+# Predict: Stage 1 (major) → Stage 2 (subcategory)
 major_pred, sub_pred = hierarchical.hierarchical_predict(
     major_clf, sub_clfs, X_test, subcat_to_major
 )
@@ -596,7 +596,7 @@ major_pred, sub_pred = hierarchical.hierarchical_predict(
 **Benefits:**
 - Captures category structure (broad rollup + detailed expense tracking)
 - Improves accuracy by constraining Stage 2 to valid subcategories
-- Enables multi-level reporting (Schedule C major categories â†’ detailed audit trail)
+- Enables multi-level reporting (Schedule C major categories → detailed audit trail)
 
 #### 7. **Visualizations & Evaluation** (`src/sourcetax/models/visualize.py`)
 
@@ -629,7 +629,7 @@ report_paths = visualize.generate_evaluation_report(
 
 #### 8. **Orchestration Script** (`tools/train_ml_advanced.py`)
 
-End-to-end training pipeline: Load gold â†’ normalize â†’ embed â†’ train TF-IDF + SBERT + hierarchical â†’ evaluate â†’ generate visualizations.
+End-to-end training pipeline: Load gold → normalize → embed → train TF-IDF + SBERT + hierarchical → evaluate → generate visualizations.
 
 ```bash
 # Full ML workflow
@@ -640,11 +640,11 @@ python tools/train_ml_advanced.py --strategy sbert
 python tools/train_ml_advanced.py --strategy hierarchical
 
 # Output:
-#   âœ… Loaded 10 gold records (train: 7, val: 1, test: 2)
-#   âœ… TF-IDF baseline: train_acc=0.714, val_acc=1.000
-#   âœ… SBERT classifier: train_acc=0.857, val_acc=1.000
-#   âœ… Hierarchical: major_acc=1.000, sub_acc=0.857
-#   âœ… Visualizations saved to data/ml/evaluation_report/
+#   ✅ Loaded 10 gold records (train: 7, val: 1, test: 2)
+#   ✅ TF-IDF baseline: train_acc=0.714, val_acc=1.000
+#   ✅ SBERT classifier: train_acc=0.857, val_acc=1.000
+#   ✅ Hierarchical: major_acc=1.000, sub_acc=0.857
+#   ✅ Visualizations saved to data/ml/evaluation_report/
 ```
 
 ### Recommended Workflow for Expanding Gold Set
@@ -668,22 +668,22 @@ python tools/train_ml_advanced.py --strategy hierarchical
    ```bash
    python tools/train_ml_advanced.py --strategy all
    ```
-6. **Repeat steps 3â€“5** until validation accuracy plateaus (typically 200â€“300 labeled examples)
+6. **Repeat steps 3–5** until validation accuracy plateaus (typically 200–300 labeled examples)
 
 ### Expected Improvements
 
 | Approach | # Gold Records | Accuracy | Training Time |
 |----------|--|--|--|
-| Rules-only | â€” | 50% | <1s |
-| TF-IDF baseline | 10 | 60â€“70% | 1s |
-| TF-IDF (expanded) | 150 | 75â€“85% | 2s |
-| SBERT | 10 | 70â€“75% | 5s (+ embed cache) |
-| SBERT (expanded) | 150 | 85â€“92% | 10s |
-| Hierarchical + SBERT | 150 | 85â€“92% (major), 80â€“88% (sub) | 15s |
+| Rules-only | — | 50% | <1s |
+| TF-IDF baseline | 10 | 60–70% | 1s |
+| TF-IDF (expanded) | 150 | 75–85% | 2s |
+| SBERT | 10 | 70–75% | 5s (+ embed cache) |
+| SBERT (expanded) | 150 | 85–92% | 10s |
+| Hierarchical + SBERT | 150 | 85–92% (major), 80–88% (sub) | 15s |
 
 ## Roadmap
 
-### Phase 4 â€” Advanced Exports & Reconciliation
+### Phase 4 — Advanced Exports & Reconciliation
 
 **Status:** MVP implemented (Phase 4a/4b/4c minimum viable)
 
@@ -704,7 +704,7 @@ python tools/train_ml_advanced.py --strategy hierarchical
 
 **Planned / Priority:** Expand gold dataset to 200+ labeled records and lock balanced train/val/test splits.
 
-### Phase 5 â€” Multi-User & Cloud
+### Phase 5 — Multi-User & Cloud
 
 **Planned:** Web UI, user accounts, cloud storage, batch processing.
 
