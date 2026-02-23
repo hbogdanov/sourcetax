@@ -434,7 +434,7 @@ Before Phase 3 ML work, expand the gold dataset to ~200 records using `app_revie
 
 ## Phase 3 — ML Categorization & Advanced Features
 
-**Status:** OK: Foundation complete. TF-IDF baseline, SBERT embeddings, active learning, and hierarchical classification implemented.
+**Status:** Foundation complete. TF-IDF baseline, SBERT embeddings, active learning, and hierarchical classification implemented.
 
 ### Phase 3 Foundation (Complete)
 
@@ -640,11 +640,11 @@ python tools/train_ml_advanced.py --strategy sbert
 python tools/train_ml_advanced.py --strategy hierarchical
 
 # Output:
-#   OK: Loaded 10 gold records (train: 7, val: 1, test: 2)
-#   OK: TF-IDF baseline: train_acc=0.714, val_acc=1.000
-#   OK: SBERT classifier: train_acc=0.857, val_acc=1.000
-#   OK: Hierarchical: major_acc=1.000, sub_acc=0.857
-#   OK: Visualizations saved to data/ml/evaluation_report/
+#   Loaded 10 gold records (train: 7, val: 1, test: 2)
+#   TF-IDF baseline: train_acc=0.714, val_acc=1.000
+#   SBERT classifier: train_acc=0.857, val_acc=1.000
+#   Hierarchical: major_acc=1.000, sub_acc=0.857
+#   Visualizations saved to data/ml/evaluation_report/
 ```
 
 ### Recommended Workflow for Expanding Gold Set
