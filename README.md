@@ -166,7 +166,7 @@ A modular, staged pipeline:
 
 ## Phase Completion Status
 
-### Phase 0 — OK: Complete
+### Phase 0 — Complete
 
 **Foundation:** Canonical schema, sample data, basic CSV ingestion, SQLite storage.
 
@@ -177,7 +177,7 @@ A modular, staged pipeline:
 - CSV ingestors for toast, bank, quickbooks
 - SQLite schema and basic I/O
 
-### Phase 1 — OK: Complete (phase1 branch)
+### Phase 1 — Complete (phase1 branch)
 
 **Schema & Cleanup:** Enhanced canonical schema, fixed encoding, code formatting, repo hygiene.
 
@@ -187,7 +187,7 @@ A modular, staged pipeline:
 - Updated .gitignore to exclude large artifacts
 - All tests pass, demo works deterministically
 
-### Phase 2 — OK: Complete (phase2 branch)
+### Phase 2 — Complete (phase2 branch)
 
 **Receipt Extraction, Matching, Categorization, Review UI.**
 
