@@ -355,57 +355,57 @@ Key functions:
 
 ```
 sourcetax/
-├── src/sourcetax/           # Core packages
-â”‚   ├── __init__.py         # Package marker
-â”‚   ├── schema.py           # CanonicalRecord dataclass
-â”‚   ├── ingest.py           # Ingestion pipeline (CSV/receipt)
-â”‚   ├── storage.py          # SQLite persistence
-â”‚   ├── receipts.py         # OCR + field extraction (Phase 2.1)
-â”‚   ├── matching.py         # Receipt↔bank matching (Phase 2.2)
-â”‚   ├── categorization.py   # Rules engine (Phase 2.3)
-â”‚   ├── exporter.py         # QB/SC/audit exports (Phase 2.4)
-â”‚   └── models/             # Phase 3 ML modules
-â”‚       ├── __init__.py
-â”‚       ├── data_prep.py              # Load splits, stratified sampling
-â”‚       ├── train_baseline.py         # TF-IDF + LogisticRegression
-â”‚       ├── train_sbert.py            # SBERT embeddings + LR classifier
-â”‚       ├── evaluate.py               # Metrics, comparison, error analysis
-â”‚       ├── merchant_normalizer.py    # Rule-based merchant cleaning
-â”‚       ├── embeddings.py             # SentenceTransformer + caching
-â”‚       ├── active_learning.py        # 4 selection strategies
-â”‚       ├── hierarchical.py           # Major → subcategory classification
-â”‚       └── visualize.py              # Confusion matrix, P/R charts, comparison
-├── data/
-â”‚   ├── samples/            # Sample data (QB, Toast, Plaid, receipts)
-â”‚   ├── forms/funsd/        # FUNSD dataset (149 forms)
-â”‚   ├── combined_dataset/   # combined_samples.jsonl
-â”‚   ├── gold/               # Hand-labeled evaluation set (10+ records)
-â”‚   ├── ml/                 # ML artifacts (splits, pipelines, reports)
-â”‚   â”‚   ├── ml_train.csv    # Locked training set
-â”‚   â”‚   ├── ml_val.csv      # Validation set
-â”‚   â”‚   ├── ml_test.csv     # Test set
-â”‚   â”‚   ├── baseline_pipeline.pkl  # TF-IDF trained pipeline
-â”‚   â”‚   ├── sbert_pipeline.pkl     # SBERT trained pipeline (if trained)
-â”‚   â”‚   ├── evaluation_report/     # Visualizations (HTML)
-â”‚   â”‚   └── split_metadata.txt     # Stratification info
-â”‚   ├── taxonomy/           # Schedule C taxonomy JSON
-â”‚   ├── mappings/           # Merchant category mapping CSV
-â”‚   └── store.db            # SQLite database
-├── outputs/                # Generated exports (QB CSV, Schedule C)
-├── tools/                  # Utility scripts
-â”‚   ├── generate_reports.py         # End-to-end demo (runs all phases)
-â”‚   ├── generate_training_samples.py
-â”‚   ├── convert_funsd_to_combined.py
-â”‚   ├── count_combined.py
-â”‚   ├── eval.py                    # Evaluation on current pipeline
-â”‚   ├── train_ml_baseline.py       # TF-IDF baseline training
-â”‚   ├── train_ml_advanced.py       # Advanced ML (SBERT, hierarchical)
-â”‚   ├── select_for_labeling.py     # Active learning selection
-â”‚   └── fetch_public_datasets.py
-├── app_review.py           # Streamlit dashboard UI
-├── tests/                  # Test suite
-├── pyproject.toml          # Package metadata + dependencies
-└── README.md               # This file
+|-- src/sourcetax/           # Core packages
+|   |-- __init__.py         # Package marker
+|   |-- schema.py           # CanonicalRecord dataclass
+|   |-- ingest.py           # Ingestion pipeline (CSV/receipt)
+|   |-- storage.py          # SQLite persistence
+|   |-- receipts.py         # OCR + field extraction (Phase 2.1)
+|   |-- matching.py         # Receipt?bank matching (Phase 2.2)
+|   |-- categorization.py   # Rules engine (Phase 2.3)
+|   |-- exporter.py         # QB/SC/audit exports (Phase 2.4)
+|   `-- models/             # Phase 3 ML modules
+|       |-- __init__.py
+|       |-- data_prep.py              # Load splits, stratified sampling
+|       |-- train_baseline.py         # TF-IDF + LogisticRegression
+|       |-- train_sbert.py            # SBERT embeddings + LR classifier
+|       |-- evaluate.py               # Metrics, comparison, error analysis
+|       |-- merchant_normalizer.py    # Rule-based merchant cleaning
+|       |-- embeddings.py             # SentenceTransformer + caching
+|       |-- active_learning.py        # 4 selection strategies
+|       |-- hierarchical.py           # Major ? subcategory classification
+|       `-- visualize.py              # Confusion matrix, P/R charts, comparison
+|-- data/
+|   |-- samples/            # Sample data (QB, Toast, Plaid, receipts)
+|   |-- forms/funsd/        # FUNSD dataset (149 forms)
+|   |-- combined_dataset/   # combined_samples.jsonl
+|   |-- gold/               # Hand-labeled evaluation set (10+ records)
+|   |-- ml/                 # ML artifacts (splits, pipelines, reports)
+|   |   |-- ml_train.csv    # Locked training set
+|   |   |-- ml_val.csv      # Validation set
+|   |   |-- ml_test.csv     # Test set
+|   |   |-- baseline_pipeline.pkl  # TF-IDF trained pipeline
+|   |   |-- sbert_pipeline.pkl     # SBERT trained pipeline (if trained)
+|   |   |-- evaluation_report/     # Visualizations (HTML)
+|   |   `-- split_metadata.txt     # Stratification info
+|   |-- taxonomy/           # Schedule C taxonomy JSON
+|   |-- mappings/           # Merchant category mapping CSV
+|   `-- store.db            # SQLite database
+|-- outputs/                # Generated exports (QB CSV, Schedule C)
+|-- tools/                  # Utility scripts
+|   |-- generate_reports.py         # End-to-end demo (runs all phases)
+|   |-- generate_training_samples.py
+|   |-- convert_funsd_to_combined.py
+|   |-- count_combined.py
+|   |-- eval.py                    # Evaluation on current pipeline
+|   |-- train_ml_baseline.py       # TF-IDF baseline training
+|   |-- train_ml_advanced.py       # Advanced ML (SBERT, hierarchical)
+|   |-- select_for_labeling.py     # Active learning selection
+|   `-- fetch_public_datasets.py
+|-- app_review.py           # Streamlit dashboard UI
+|-- tests/                  # Test suite
+|-- pyproject.toml          # Package metadata + dependencies
+`-- README.md               # This file
 ```
 
 ## Evaluation
