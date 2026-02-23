@@ -44,20 +44,27 @@ def inject_styles() -> None:
     st.markdown(
         """
         <style>
-          .main .block-container {max-width: 1200px; padding-top: 1.2rem; padding-bottom: 2rem;}
-          .app-title {font-size: 1.7rem; font-weight: 700; margin-bottom: 0.2rem;}
-          .app-sub {color: #5b6773; margin-bottom: 0.8rem;}
-          .badge {display:inline-block; padding: 0.12rem 0.45rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;}
+          .main .block-container {max-width: 1150px; padding-top: 1.2rem; padding-bottom: 2rem;}
+          .app-title {font-size: 1.8rem; font-weight: 800; margin-bottom: 0.15rem;}
+          .app-sub {color: #5b6773; margin-bottom: 0.9rem;}
+          .mono {font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
+
+          /* Small UI polish */
+          div[data-testid="stMetric"] {border: 1px solid rgba(49,51,63,0.12); border-radius: 12px; padding: 0.75rem;}
+          .stButton>button {border-radius: 10px; padding: 0.55rem 0.8rem;}
+          div[data-testid="stDataFrame"] {border-radius: 12px; overflow: hidden; border: 1px solid rgba(49,51,63,0.12);}
+          div[data-testid="stExpander"] {border-radius: 12px; border: 1px solid rgba(49,51,63,0.10);}
+
+          /* Badges used in detail panel */
+          .badge {display:inline-block; padding: 0.12rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700;}
           .badge-high {background:#d9f5ea; color:#0b6b46;}
           .badge-mid {background:#fff1cc; color:#7a5a00;}
           .badge-low {background:#ffe0de; color:#9d1c1c;}
           .badge-issue {background:#e8f0fe; color:#174ea6;}
-          .mono {font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
         </style>
         """,
         unsafe_allow_html=True,
     )
-
 
 def safe_json_loads(value: Any, default: Any) -> Any:
     if value is None:
@@ -284,12 +291,15 @@ def category_options() -> List[str]:
 
 def render_header() -> None:
     meta = get_run_metadata()
-    st.markdown("<div class='app-title'>SourceTax Review Console</div>", unsafe_allow_html=True)
+    st.markdown("<div class='app-title'>SourceTax</div>", unsafe_allow_html=True)
     st.markdown(
-        f"<div class='app-sub'>Review matching, categorization, exports, and labeling progress | DB: <span class='mono'>{meta['db']}</span> | Commit: <span class='mono'>{meta['commit']}</span> | {meta['timestamp']}</div>",
+        "<div class='app-sub'>Transaction classification • matching • reconciliation • accounting exports</div>",
         unsafe_allow_html=True,
     )
-
+    with st.expander("Run metadata"):
+        st.write(f"DB: `{meta['db']}`")
+        st.write(f"Commit: `{meta['commit']}`")
+        st.write(f"Timestamp: `{meta['timestamp']}`")
 
 def run_pipeline_actions() -> None:
     c1, c2, c3 = st.columns([1, 1, 1.2])
@@ -325,7 +335,7 @@ def render_dashboard(all_df: pd.DataFrame) -> None:
     cols[4].metric("Avg confidence", fmt_pct(stats["avg_confidence"]) if stats["avg_confidence"] is not None else "-")
     cols[5].metric("Needs review", stats["needs_review"])
 
-    c1, c2 = st.columns([1.2, 1.0])
+    c1, c2 = st.columns([1.25, 1.0])
     with c1:
         with st.container(border=True):
             st.subheader("Spend by Category")
@@ -339,25 +349,42 @@ def render_dashboard(all_df: pd.DataFrame) -> None:
                 if expenses.empty:
                     st.info("No expense rows yet.")
                 else:
-                    spend = expenses.groupby("effective_category")["amount_num"].sum().sort_values(ascending=False).head(12)
-                    st.bar_chart(spend)
+                    spend = (
+                        expenses.groupby("effective_category")["amount_num"]
+                        .sum()
+                        .sort_values(ascending=False)
+                        .reset_index()
+                        .rename(columns={"effective_category": "Category", "amount_num": "Spend"})
+                    )
+                    top = spend.head(10).copy()
+                    st.dataframe(
+                        top,
+                        hide_index=True,
+                        use_container_width=True,
+                        column_config={
+                            "Spend": st.column_config.NumberColumn("Spend", format="$%.2f"),
+                        },
+                        height=300,
+                    )
+                    st.bar_chart(top.set_index("Category")["Spend"])
     with c2:
         with st.container(border=True):
             st.subheader("Review Queue Breakdown")
-            breakdown = pd.Series(
-                {
-                    "Unmatched Receipts": len(reconciliation.unmatched_receipts(DB_PATH)),
-                    "Unmatched Bank Txns": len(reconciliation.unmatched_bank_transactions(DB_PATH)),
-                    "Low Confidence": recon_summary.get("low_confidence_queue_size", 0),
-                    "Conflicts": recon_summary.get("conflicts_queue_size", 0),
-                }
-            )
-            st.bar_chart(breakdown)
+            breakdown = pd.DataFrame(
+                [
+                    ("Unmatched Receipts", len(reconciliation.unmatched_receipts(DB_PATH))),
+                    ("Unmatched Bank Txns", len(reconciliation.unmatched_bank_transactions(DB_PATH))),
+                    ("Low Confidence", int(recon_summary.get("low_confidence_queue_size", 0) or 0)),
+                    ("Conflicts", int(recon_summary.get("conflicts_queue_size", 0) or 0)),
+                ],
+                columns=["Issue", "Count"],
+            ).sort_values("Count", ascending=False)
+            st.dataframe(breakdown, hide_index=True, use_container_width=True, height=220)
+            st.bar_chart(breakdown.set_index("Issue")["Count"])
             st.markdown("**Next actions**")
-            st.write(f"- Review {int(breakdown['Low Confidence'])} low-confidence items")
-            st.write(f"- Resolve {int(breakdown['Conflicts'])} conflicts")
+            st.write(f"- Review **{int(breakdown[breakdown['Issue']=='Low Confidence']['Count'].iloc[0]) if (breakdown['Issue']=='Low Confidence').any() else 0}** low-confidence items")
+            st.write(f"- Resolve **{int(breakdown[breakdown['Issue']=='Conflicts']['Count'].iloc[0]) if (breakdown['Issue']=='Conflicts').any() else 0}** conflicts")
             st.write("- Generate accounting exports")
-
 
 def render_record_detail_panel(record: Dict[str, Any], queue_row: Optional[Dict[str, Any]] = None) -> None:
     rec = parse_record_fields(record)
@@ -430,7 +457,7 @@ def render_review_queue(all_df: pd.DataFrame) -> None:
         issue_filter = f1.selectbox("Issue type", issue_options)
         category_filter = f2.selectbox("Category", cat_options)
         conf_range = f3.slider("Confidence", 0.0, 1.0, (0.0, 1.0), step=0.05)
-        merchant_search = f4.text_input("Merchant search")
+        merchant_search = f4.text_input("Merchant search", placeholder="Starbucks, Uber, Amazon…")
 
     qf = q.copy()
     qf["confidence_num"] = pd.to_numeric(qf["confidence"], errors="coerce")
@@ -441,23 +468,74 @@ def render_review_queue(all_df: pd.DataFrame) -> None:
     qf = qf[(qf["confidence_num"].fillna(-1).between(conf_range[0], conf_range[1])) | (qf["confidence_num"].isna())]
     if merchant_search.strip():
         term = merchant_search.strip().lower()
-        qf = qf[qf["merchant_raw"].fillna("").str.lower().str.contains(term) | qf["merchant_norm"].fillna("").str.lower().str.contains(term)]
+        qf = qf[
+            qf["merchant_raw"].fillna("").str.lower().str.contains(term)
+            | qf["merchant_norm"].fillna("").str.lower().str.contains(term)
+        ]
 
-    left, right = st.columns([1.25, 1.0])
+    if qf.empty:
+        st.info("No items match the current filters.")
+        return
+
+    def _short_id(x: Any) -> str:
+        s = str(x or "")
+        return s[:8] if s else ""
+
+    left, right = st.columns([1.35, 1.0])
     with left:
         with st.container(border=True):
             st.subheader(f"Queue ({len(qf)} items)")
-            display = qf[["id", "transaction_date", "merchant_raw", "amount", "effective_category", "confidence", "issue_type"]].copy()
-            display.columns = ["ID", "Date", "Merchant", "Amount", "Category", "Confidence", "Issue"]
-            st.dataframe(display, width="stretch", hide_index=True)
-            selected_id = st.selectbox("Open transaction", qf["id"].tolist() if not qf.empty else [], key="review_select")
+
+            display = qf[["id", "transaction_date", "merchant_raw", "amount", "effective_category", "confidence_num", "issue_type"]].copy()
+            display["id"] = display["id"].map(_short_id)
+            display.rename(
+                columns={
+                    "id": "ID",
+                    "transaction_date": "Date",
+                    "merchant_raw": "Merchant",
+                    "amount": "Amount",
+                    "effective_category": "Category",
+                    "confidence_num": "Confidence",
+                    "issue_type": "Issue",
+                },
+                inplace=True,
+            )
+
+            st.dataframe(
+                display,
+                hide_index=True,
+                use_container_width=True,
+                height=420,
+                column_config={
+                    "Confidence": st.column_config.ProgressColumn("Confidence", min_value=0.0, max_value=1.0, format="%.0f%%"),
+                    "Amount": st.column_config.NumberColumn("Amount", format="$%.2f"),
+                    "Date": st.column_config.DateColumn("Date"),
+                    "Issue": st.column_config.TextColumn("Issue", help="Why this row needs review"),
+                },
+            )
+
+            # Selection (human-friendly labels instead of UUID soup)
+            labels = (
+                qf["transaction_date"].fillna("").astype(str)
+                + " • "
+                + qf["merchant_raw"].fillna("Unknown merchant").astype(str).str.slice(0, 40)
+                + " • "
+                + qf["amount"].fillna("").astype(str)
+            ).tolist()
+            idx = st.radio(
+                "Open item",
+                options=list(range(len(labels))),
+                format_func=lambda i: labels[i],
+                key="review_select_idx",
+            )
+            selected_id = qf.iloc[idx]["id"]
+
     with right:
-        if not qf.empty and selected_id:
+        if selected_id:
             rec = fetch_record(selected_id)
             row = qf[qf["id"] == selected_id].iloc[0].to_dict()
             if rec:
                 render_record_detail_panel(rec, queue_row=row)
-
 
 def match_candidates_for_receipt(receipt: Dict[str, Any], top_k: int = 5) -> pd.DataFrame:
     candidates = query_rows(
