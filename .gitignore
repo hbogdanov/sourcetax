@@ -19,6 +19,7 @@ data/store.db
 data/forms/
 data/combined_dataset/
 outputs/
+reports/
 tmp/
 
 # Large dataset artifacts (generated, not source)

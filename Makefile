@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: setup smoke test benchmark phase4
+.PHONY: setup smoke smoke-strict test benchmark phase4
 
 setup:
 	$(PYTHON) -m pip install --upgrade pip
@@ -9,6 +9,9 @@ setup:
 
 smoke:
 	$(PYTHON) tools/smoke_run.py
+
+smoke-strict:
+	$(PYTHON) tools/smoke_run.py --strict
 
 benchmark:
 	$(PYTHON) tools/phase3_benchmark.py --allow-small

@@ -227,7 +227,12 @@ def eval_matching_accuracy(gold_records: List[Dict]) -> Tuple[float, float, floa
             predicted_matches.add((receipt.get("id"), best_match_id))
     
     if len(predicted_matches) == 0:
-        return 0.0, 0.0 if not true_matches else 1.0, 0.0
+        # No predicted matches:
+        # - If no true matches exist either, recall is vacuously 1.0.
+        # - If true matches exist, recall must be 0.0 (not 1.0).
+        if len(true_matches) == 0:
+            return 0.0, 1.0, 0.0
+        return 0.0, 0.0, 0.0
     
     correct = len(predicted_matches & true_matches)
     precision = correct / len(predicted_matches) if predicted_matches else 0.0

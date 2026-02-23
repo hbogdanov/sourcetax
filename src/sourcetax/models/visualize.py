@@ -111,8 +111,6 @@ def precision_recall_chart_html(
             "F1": f"{f1[i]:.2f}",
         })
     
-    df = pd.DataFrame(data)
-    
     # Convert to JSON for chart.js
     import json
     data_json = json.dumps({
@@ -250,9 +248,15 @@ def generate_evaluation_report(
         
         comparison_metrics[model_name] = {
             "accuracy": accuracy_score(y_true, y_pred),
-            "precision_macro": precision_score(y_true, y_pred, average='macro', zero_division=0),
-            "recall_macro": recall_score(y_true, y_pred, average='macro', zero_division=0),
-            "f1_macro": f1_score(y_true, y_pred, average='macro', zero_division=0),
+            "precision_macro": precision_score(
+                y_true, y_pred, labels=label_names, average='macro', zero_division=0
+            ),
+            "recall_macro": recall_score(
+                y_true, y_pred, labels=label_names, average='macro', zero_division=0
+            ),
+            "f1_macro": f1_score(
+                y_true, y_pred, labels=label_names, average='macro', zero_division=0
+            ),
         }
         
         results[model_name] = str(cm_path)
