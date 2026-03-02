@@ -35,6 +35,7 @@ An AI-driven pipeline that ingests transaction data from banks, POS systems, and
   - `tools/import_hf_mitulshah.py` (HF transaction corpus backbone)
   - `tools/import_dc_pcard.py` (DC ArcGIS purchase card feed with paged API ingestion)
   - `tools/import_receipts_sroie.py` (SROIE receipt OCR realism importer)
+- Added mapping profiler `tools/staging_mapping_profile.py` to fill category/MCC mappings from observed staging values
 
 ## Quick Start
 
@@ -96,6 +97,7 @@ python tools/gold_balance_report.py --target 200 --batch-size 25
 python tools/import_hf_mitulshah.py --staging-db data/staging.db --max-rows 100000
 python tools/import_dc_pcard.py --staging-db data/staging.db --max-rows 50000
 python tools/import_receipts_sroie.py --staging-db data/staging.db --max-rows 5000
+python tools/staging_mapping_profile.py --staging-db data/staging.db --limit 100
 ```
 
 `make smoke` runs a lightweight end-to-end flow and best-effort evaluation without requiring EasyOCR or SBERT.
@@ -215,6 +217,20 @@ Staging DB path: `data/staging.db` (tables: `staging_transactions`, `staging_rec
     - `total` parsed from `entities.total`
     - `merchant_raw <- entities.company` (fallback to OCR header token)
     - full source annotation preserved in `raw_payload_json`
+
+## Gradual Mapping Workflow
+
+Do not try to complete mapping tables upfront. Fill mappings from values that actually appear in staging data.
+
+1. Import source datasets into `data/staging.db`.
+2. Run profiler: `python tools/staging_mapping_profile.py --staging-db data/staging.db --limit 100`.
+3. Update:
+   - `data/mappings/external_category_to_sourcetax_v1.json`
+   - `data/mappings/mcc_to_sourcetax_v1.json`
+
+Notes:
+- `mcc_to_sourcetax_v1.json` supports both numeric MCC codes and `mcc_description` strings.
+- Mapping precedence supports keyword rules, MCC code, MCC description, then external category fallback.
 
 ## Phase Completion Status
 

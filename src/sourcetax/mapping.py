@@ -49,6 +49,19 @@ def map_mcc(mcc: Optional[str]) -> Optional[str]:
     return mapping.get(str(mcc).strip())
 
 
+def map_mcc_description(mcc_description: Optional[str]) -> Optional[str]:
+    if not mcc_description:
+        return None
+    mapping = load_json_mapping(MCC_MAP_PATH)
+    key = str(mcc_description).strip()
+    if not key:
+        return None
+    direct = mapping.get(key)
+    if direct:
+        return direct
+    return mapping.get(key.upper())
+
+
 def _keyword_match(text: str, keyword_rules: Dict[str, str]) -> Optional[str]:
     if not text:
         return None
@@ -64,6 +77,7 @@ def resolve_category_with_precedence(
     merchant_raw: Optional[str] = None,
     description: Optional[str] = None,
     mcc: Optional[str] = None,
+    mcc_description: Optional[str] = None,
     external_category: Optional[str] = None,
     keyword_rules: Optional[Dict[str, str]] = None,
     fallback: str = "Other Expense",
@@ -85,9 +99,12 @@ def resolve_category_with_precedence(
     if mcc_category:
         return mcc_category
 
+    mcc_desc_category = map_mcc_description(mcc_description)
+    if mcc_desc_category:
+        return mcc_desc_category
+
     ext_category = map_external_category(external_category)
     if ext_category:
         return ext_category
 
     return fallback
-

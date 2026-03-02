@@ -36,6 +36,16 @@ def test_mapping_precedence_mcc_then_external_then_fallback():
     assert fallback == "Other Expense"
 
 
+def test_mapping_supports_mcc_description_mapping():
+    category = mapping.resolve_category_with_precedence(
+        merchant_raw="UNKNOWN MERCHANT",
+        mcc=None,
+        mcc_description="RESTAURANTS",
+        external_category=None,
+    )
+    assert category == "Meals & Entertainment"
+
+
 def test_staging_create_insert_and_count(tmp_path: Path):
     db_path = tmp_path / "staging.db"
     staging.ensure_staging_db(db_path)
@@ -74,4 +84,3 @@ def test_staging_create_insert_and_count(tmp_path: Path):
     counts = staging.get_staging_counts(path=db_path)
     assert counts["staging_transactions"] == 1
     assert counts["staging_receipts"] == 1
-
