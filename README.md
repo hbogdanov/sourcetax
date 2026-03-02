@@ -38,6 +38,8 @@ An AI-driven pipeline that ingests transaction data from banks, POS systems, and
 - Added mapping profiler `tools/staging_mapping_profile.py` to fill category/MCC mappings from observed staging values
 - Added explainable mapping output (`mapping_reason` / `evidence_keys`) via `tools/build_training_rows_from_staging.py`
 - Added stronger merchant normalization rules and reusable noise generator (`src/sourcetax/merchant_noise.py`)
+- Added matched receipt↔bank pair generator with negatives (`tools/generate_pairs.py`) and mini matching gold output
+- Added synthetic gap-fill generator setup for undercovered business categories (`tools/generate_synthetic_gapfill.py`)
 
 ## Quick Start
 
@@ -101,6 +103,8 @@ python tools/import_dc_pcard.py --staging-db data/staging.db --max-rows 50000
 python tools/import_receipts_sroie.py --staging-db data/staging.db --max-rows 5000
 python tools/staging_mapping_profile.py --staging-db data/staging.db --limit 100
 python tools/build_training_rows_from_staging.py --staging-db data/staging.db --out data/ml/staging_training_rows.jsonl
+python tools/generate_pairs.py --staging-db data/staging.db --pair-count 50 --mini-out data/gold/matching_gold_mini_set.jsonl
+python tools/generate_synthetic_gapfill.py --staging-db data/staging.db --rows 1000 --dry-run
 ```
 
 `make smoke` runs a lightweight end-to-end flow and best-effort evaluation without requiring EasyOCR or SBERT.
@@ -243,6 +247,36 @@ Notes:
 - Synthetic/noisy merchant variant generation is available via:
   - `sourcetax.normalization.generate_noisy_merchant_raw(...)`
   - `src/sourcetax/merchant_noise.py`
+
+## Matching Pair Generator
+
+`tools/generate_pairs.py` creates realistic matched receipt↔bank pairs for matching evaluation and also generates hard negatives.
+
+- Positive pair recipe:
+  - choose receipt `{merchant, total, date}` from `staging_receipts`
+  - bank date offset sampled from `{0,1,2}` with probs `{0.55,0.35,0.10}`
+  - bank amount set to `-total` with optional tip/rounding noise
+  - bank `merchant_raw` generated via merchant noise model
+  - shared `group_id` attached to receipt and bank payloads
+- Negative generation includes:
+  - same date, different merchant
+  - same merchant, different amount
+  - same amount, different date
+- Outputs:
+  - writes synthetic rows into staging tables
+  - writes mini gold JSONL (default `data/gold/matching_gold_mini_set.jsonl`)
+
+## Synthetic Gap-Fill Setup
+
+`tools/generate_synthetic_gapfill.py` is set up to generate realistic synthetic transactions for undercovered categories:
+
+- `COGS`
+- `Payroll & Contractors`
+- `Taxes & Licenses`
+- `Insurance`
+- `Professional Services`
+
+It supports template-based recurring patterns by default and an optional LLM diversification hook (`--use-llm`) constrained to SourceTax taxonomy labels.
 
 ## Phase Completion Status
 
