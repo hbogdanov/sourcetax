@@ -1,0 +1,20 @@
+[
+  {"code": "INC", "name": "Income"},
+  {"code": "COGS", "name": "COGS"},
+  {"code": "RNT", "name": "Rent & Utilities"},
+  {"code": "RPM", "name": "Repairs & Maintenance"},
+  {"code": "OFF", "name": "Office Supplies"},
+  {"code": "EQS", "name": "Equipment & Software"},
+  {"code": "MKT", "name": "Advertising & Marketing"},
+  {"code": "TRV", "name": "Travel"},
+  {"code": "MEA", "name": "Meals & Entertainment"},
+  {"code": "VEH", "name": "Vehicle Expenses"},
+  {"code": "PRO", "name": "Professional Services"},
+  {"code": "FIN", "name": "Financial Fees"},
+  {"code": "INS", "name": "Insurance"},
+  {"code": "TAX", "name": "Taxes & Licenses"},
+  {"code": "PAY", "name": "Payroll & Contractors"},
+  {"code": "EDU", "name": "Education & Training"},
+  {"code": "OTH", "name": "Other Expense"},
+  {"code": "UNCAT", "name": "Uncategorized"}
+]

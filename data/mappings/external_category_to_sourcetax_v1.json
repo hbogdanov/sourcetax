@@ -1,0 +1,19 @@
+{
+  "Food & Dining": "Meals & Entertainment",
+  "Transportation": "Vehicle Expenses",
+  "Shopping & Retail": "Office Supplies",
+  "Entertainment & Recreation": "Meals & Entertainment",
+  "Healthcare & Medical": "Other Expense",
+  "Utilities & Services": "Rent & Utilities",
+  "Financial Services": "Financial Fees",
+  "Income": "Income",
+  "Government & Legal": "Taxes & Licenses",
+  "Charity & Donations": "Other Expense",
+  "Food": "Meals & Entertainment",
+  "Transport": "Vehicle Expenses",
+  "Grocery": "Meals & Entertainment",
+  "Electronics": "Equipment & Software",
+  "Utilities": "Rent & Utilities",
+  "Travel": "Travel",
+  "Insurance": "Insurance"
+}

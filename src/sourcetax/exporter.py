@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
 
-from .taxonomy import load_merchant_map
+from .taxonomy import load_merchant_map, normalize_category_name
 from .categorization import KEYWORD_RULES
 
 
@@ -64,7 +64,13 @@ def _infer_label_source(record: Dict[str, Any]) -> str:
 
 
 def _effective_category(record: Dict[str, Any]) -> str:
-    return record.get("category_final") or record.get("category_pred") or "Uncategorized"
+    final_cat = normalize_category_name(record.get("category_final"))
+    if final_cat:
+        return final_cat
+    pred_cat = normalize_category_name(record.get("category_pred"))
+    if pred_cat:
+        return pred_cat
+    return "Uncategorized"
 
 
 def _to_record_dict(row: sqlite3.Row) -> Dict[str, Any]:
@@ -183,8 +189,8 @@ def export_transactions_enriched_csv(
                     "amount": rec.get("amount") if rec.get("amount") is not None else "",
                     "currency": rec.get("currency") or "USD",
                     "direction": rec.get("direction") or "",
-                    "predicted_category": rec.get("category_pred") or "",
-                    "final_category": rec.get("category_final") or "",
+                    "predicted_category": normalize_category_name(rec.get("category_pred")) or "",
+                    "final_category": normalize_category_name(rec.get("category_final")) or "",
                     "effective_category": _effective_category(rec),
                     "confidence": rec.get("confidence") if rec.get("confidence") is not None else "",
                     "label_source": _infer_label_source(rec),
@@ -424,7 +430,7 @@ def generate_quickbooks_csv(
             amount = rec["amount"] if rec["amount"] is not None else ""
             
             # Use category_final (user override) if present, else category_pred
-            category = rec["category_final"] or rec["category_pred"] or "Uncategorized"
+            category = _effective_category(rec)
             
             writer.writerow([date, merchant, amount, merchant, category])
     return str(outp)
@@ -443,7 +449,7 @@ def compute_schedule_c_totals(db_path: str = "data/store.db"):
             continue
         
         # Use category_final (user override) if present, else category_pred
-        category = rec["category_final"] or rec["category_pred"] or "Uncategorized"
+        category = _effective_category(rec)
         
         totals.setdefault(category, 0.0)
         count_by_category.setdefault(category, 0)
@@ -503,14 +509,16 @@ def export_audit_pack(db_path: str = "data/store.db", out_path: str = "outputs/a
         ])
         
         for row in cur.fetchall():
-            category = row["category_final"] or row["category_pred"] or "Uncategorized"
+            category = _effective_category(dict(row))
+            category_final = normalize_category_name(row["category_final"]) or ""
+            category_pred = normalize_category_name(row["category_pred"]) or ""
             writer.writerow([
                 row["transaction_date"],
                 row["merchant_raw"],
                 f"{row['amount']:.2f}" if row["amount"] else "",
                 row["direction"],
-                row["category_final"] or "",
-                row["category_pred"] or "",
+                category_final,
+                category_pred,
                 row["matched_transaction_id"] or "",
                 f"{row['match_score']:.2%}" if row["match_score"] else "",
                 f"{row['confidence']:.1%}" if row["confidence"] else "",
@@ -642,6 +650,12 @@ def export_gold_transactions_jsonl(
             if not isinstance(raw_payload, dict):
                 raw_payload = {}
 
+            category_final = normalize_category_name(row["category_final"])
+            if not category_final:
+                # Guard against category drift in stored data.
+                continue
+            category_pred = normalize_category_name(row["category_pred"])
+
             record = {
                 "id": row["id"],
                 "source": row["source"],
@@ -649,8 +663,8 @@ def export_gold_transactions_jsonl(
                 "merchant_raw": row["merchant_raw"],
                 "merchant_norm": row["merchant_norm"],
                 "amount": row["amount"],
-                "category_pred": row["category_pred"],
-                "category_final": row["category_final"],
+                "category_pred": category_pred,
+                "category_final": category_final,
                 "matched_transaction_id": row["matched_transaction_id"],
                 "match_score": row["match_score"],
                 "raw_payload": raw_payload,

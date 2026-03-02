@@ -27,6 +27,10 @@ An AI-driven pipeline that ingests transaction data from banks, POS systems, and
 - Fixed matching recall edge case in `tools/eval.py` (no impossible recall when no matches are predicted)
 - Smoke demo now inserts a deterministic synthetic receipt so matching shows at least one receipt match
 - Added `--strict` smoke assertions and benchmark `needs_review.csv` / run metadata output
+- Added locked SourceTax taxonomy contract in `data/taxonomy/sourcetax_v1.json` and wired enforcement in UI/validators/exports
+- Added deterministic mapping scaffolds (`data/mappings/external_category_to_sourcetax_v1.json`, `data/mappings/mcc_to_sourcetax_v1.json`)
+- Added staging-layer utilities (`src/sourcetax/staging.py`) and mapping precedence utilities (`src/sourcetax/mapping.py`)
+- Added gold-set balance report CLI (`tools/gold_balance_report.py`) and enforcement tests (`tests/test_data_foundation.py`, `tests/test_taxonomy_enforcement.py`)
 
 ## Quick Start
 
@@ -84,6 +88,7 @@ make smoke
 make smoke-strict
 make phase4
 make test
+python tools/gold_balance_report.py --target 200 --batch-size 25
 ```
 
 `make smoke` runs a lightweight end-to-end flow and best-effort evaluation without requiring EasyOCR or SBERT.
@@ -163,6 +168,17 @@ A modular, staged pipeline:
 
 7. **Export** (`src/sourcetax/exporter.py`)  
    Generate QuickBooks CSV, Schedule C totals, audit pack.
+
+## Taxonomy Contract (SourceTax v1)
+
+SourceTax now uses a single category contract at `data/taxonomy/sourcetax_v1.json`.
+
+- UI category dropdown reads from taxonomy file (no hardcoded category list).
+- Validators reject category overrides not present in SourceTax v1.
+- Exports normalize aliases and only emit SourceTax v1 categories (fallback: `Uncategorized`).
+- Mapping scaffolds are stored in:
+  - `data/mappings/external_category_to_sourcetax_v1.json`
+  - `data/mappings/mcc_to_sourcetax_v1.json`
 
 ## Phase Completion Status
 
@@ -680,6 +696,82 @@ python tools/train_ml_advanced.py --strategy hierarchical
 | SBERT | 10 | 70–75% | 5s (+ embed cache) |
 | SBERT (expanded) | 150 | 85–92% | 10s |
 | Hierarchical + SBERT | 150 | 85–92% (major), 80–88% (sub) | 15s |
+
+## Goals and Milestones (Working Plan)
+
+### Milestone 1 - UI + Demo Experience
+
+- [ ] Adopt SourceTax brand theme (cyan/blue/white)
+- [ ] Add `.streamlit/config.toml` with theme colors
+- [ ] Keep `inject_styles()` for lightweight polish (borders, badges, containers)
+- [ ] Keep UI demo-first and skimmable
+- [ ] Dashboard includes: key metrics, spend by category, queue counts
+- [ ] Human-in-the-loop review queue with filtering and detail panel
+- [ ] Matching review shows candidate list plus score breakdown
+- [ ] Exports page includes file previews and download buttons
+- [ ] Gold-set progress page shows count, distribution, and labeling workflow links
+
+### Milestone 2 - Gold Dataset (Highest Priority)
+
+- [ ] Build a gold ground-truth dataset before additional ML work
+- [ ] Target `GOLD_TARGET = 200` labeled transactions
+- [ ] Maintain category balance (avoid over-concentration in one class)
+- [ ] Maintain source balance across bank / receipt / POS / QuickBooks
+- [ ] Include easy cases (sanity checks)
+- [ ] Include ambiguous cases (real-world uncertainty)
+- [ ] Include edge cases (refunds, fees, subscriptions, income)
+- [ ] Label in batches of 25-50 records
+- [ ] After each batch: check category distribution, then sample underrepresented categories
+
+### Milestone 3 - Zero-Shot LLM Categorization
+
+- [ ] Implement zero-shot LLM classifier for categorization
+- [ ] Input features: `merchant_raw`, `merchant_norm`, `amount`, `date`, `direction`, optional OCR excerpt
+- [ ] Output strict JSON: `{category, confidence, top3(optional)}`
+- [ ] Category output must match SourceTax taxonomy exactly
+- [ ] Allow `Uncategorized` when uncertain
+- [ ] Build evaluation harness on the gold set
+- [ ] Compare against rules baseline, TF-IDF baseline, SBERT model
+- [ ] Save results and errors to a `needs_review` output for inspection
+
+### Milestone 4 - Synthetic Data Generation
+
+- [ ] Generate realistic synthetic dataset to unblock ML work with protected financial data
+- [ ] Create "true" transactions first (merchant, category, date, amount, direction)
+- [ ] Generate noisy observed variants (messy merchant strings, OCR-like text, missing/partial fields)
+- [ ] Simulate realistic distributions (long-tail merchants + large merchants, category priors, amount ranges)
+- [ ] Simulate time patterns (monthly rent, frequent meals, etc.)
+- [ ] Build synthetic matching pairs (receipt <-> bank transaction) with realistic drift
+- [ ] Include drift: date offset (0-2 days), amount drift (tips/rounding), merchant variations
+- [ ] Add hard negatives (similar dates/amounts but wrong merchant) to stress-test matching
+- [ ] Start with 10k-50k examples, validate quality, then scale
+
+### Milestone 5 - Matching + Reconciliation
+
+- [ ] Improve matching explainability with explicit amount/date/merchant score breakdown
+- [ ] Track match strength label (`strong`, `medium`, `weak`)
+- [ ] Maintain reconciliation queues for unmatched receipts
+- [ ] Maintain reconciliation queues for unmatched bank transactions
+- [ ] Maintain reconciliation queues for low-confidence categorizations
+- [ ] Maintain reconciliation queues for model conflicts (rules vs ML vs ensemble)
+- [ ] Export queue CSVs plus summary metrics for review
+
+### Milestone 6 - Benchmarking + Demo Story
+
+- [ ] Maintain one model comparison scoreboard for gold-set accuracy
+- [ ] Track and report: rules, TF-IDF, SBERT, zero-shot LLM
+- [ ] Show compact scoreboard table on Dashboard or write to `reports/`
+- [ ] Keep demo narrative: ingest -> match -> categorize -> review queue -> export
+- [ ] Include before/after examples (raw merchant -> normalized merchant)
+- [ ] Include low-confidence -> human override -> exported final label example
+
+### Milestone 7 - Repo + Engineering Hygiene
+
+- [ ] Keep demo-safe commands reliable: `make setup`, `make smoke`, `make test`
+- [ ] Continue safe JSON decoding for DB fields (`safe_json_loads`)
+- [ ] Keep exports organized in `outputs/` with predictable filenames
+- [ ] Keep reconciliation reports in `outputs/reconciliation/`
+- [ ] Avoid brittle parsing patterns in ingestion/extraction paths
 
 ## Roadmap
 

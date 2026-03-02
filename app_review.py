@@ -29,7 +29,7 @@ import streamlit as st
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from sourcetax import categorization, exporter, matching, reconciliation, storage
+from sourcetax import categorization, exporter, matching, reconciliation, storage, taxonomy
 
 
 DB_PATH = "data/store.db"
@@ -259,7 +259,9 @@ def build_review_queue_df(all_df: pd.DataFrame) -> pd.DataFrame:
                 "source": row.get("source"),
                 "predicted_category": row.get("category_pred"),
                 "final_category": row.get("category_final"),
-                "effective_category": row.get("category_final") or row.get("category_pred") or "Uncategorized",
+                "effective_category": taxonomy.normalize_category_name(row.get("category_final"))
+                or taxonomy.normalize_category_name(row.get("category_pred"))
+                or "Uncategorized",
                 "confidence": row.get("confidence"),
                 "issue_type": issue,
                 "rules_pred": conflicts.get(rid, {}).get("rules_pred"),
@@ -274,19 +276,8 @@ def build_review_queue_df(all_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def category_options() -> List[str]:
-    return [
-        "Uncategorized",
-        "Meals & Entertainment",
-        "Travel",
-        "Supplies",
-        "Office Equipment",
-        "Utilities",
-        "Rent",
-        "Insurance",
-        "Taxes & Licenses",
-        "Other",
-        "Income",
-    ]
+    options = taxonomy.load_sourcetax_categories()
+    return options if options else ["Uncategorized"]
 
 
 def render_header() -> None:
@@ -398,7 +389,11 @@ def render_record_detail_panel(record: Dict[str, Any], queue_row: Optional[Dict[
             st.write(f"Amount: {fmt_money(rec.get('amount'))}")
             st.write(f"Source: `{rec.get('source') or '-'}`")
             st.markdown(confidence_badge_html(rec.get('confidence')), unsafe_allow_html=True)
-            current = rec.get('category_final') or rec.get('category_pred') or 'Uncategorized'
+            current = (
+                taxonomy.normalize_category_name(rec.get("category_final"))
+                or taxonomy.normalize_category_name(rec.get("category_pred"))
+                or "Uncategorized"
+            )
             st.write(f"Category: **{current}**")
             st.write(f"Label source: `{label_source_for_record(rec)}`")
             if rec.get('matched_transaction_id'):
@@ -426,21 +421,31 @@ def render_record_detail_panel(record: Dict[str, Any], queue_row: Optional[Dict[
     with st.container(border=True):
         st.subheader("Review Action")
         options = category_options()
-        current = rec.get("category_final") or rec.get("category_pred") or "Uncategorized"
+        current = (
+            taxonomy.normalize_category_name(rec.get("category_final"))
+            or taxonomy.normalize_category_name(rec.get("category_pred"))
+            or "Uncategorized"
+        )
         idx = options.index(current) if current in options else 0
         x1, x2, x3 = st.columns([2.2, 1.1, 1.1])
         with x1:
             override = st.selectbox("Override category", options, index=idx, key=f"override_{rec.get('id')}")
         with x2:
             if st.button("Approve", key=f"approve_{rec.get('id')}", width="stretch"):
-                categorization.save_category_override(rec["id"], current, DB_PATH)
-                st.success(f"Saved category: {current}")
-                st.rerun()
+                try:
+                    categorization.save_category_override(rec["id"], current, DB_PATH)
+                    st.success(f"Saved category: {current}")
+                    st.rerun()
+                except ValueError as exc:
+                    st.error(str(exc))
         with x3:
             if st.button("Save", key=f"save_{rec.get('id')}", width="stretch"):
-                categorization.save_category_override(rec["id"], override, DB_PATH)
-                st.success(f"Saved category: {override}")
-                st.rerun()
+                try:
+                    categorization.save_category_override(rec["id"], override, DB_PATH)
+                    st.success(f"Saved category: {override}")
+                    st.rerun()
+                except ValueError as exc:
+                    st.error(str(exc))
 
 
 def render_review_queue(all_df: pd.DataFrame) -> None:

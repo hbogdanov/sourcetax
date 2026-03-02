@@ -9,15 +9,16 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 import csv
 from .normalization import normalize_merchant_name
+from .taxonomy import normalize_category_name, require_valid_category
 
 
 # Keyword rules: merchant substring → (category, confidence)
 KEYWORD_RULES = {
-    "HOME DEPOT": ("Supplies", 0.6),
-    "LOWES": ("Supplies", 0.6),
-    "AMAZON": ("Supplies", 0.6),
-    "OFFICE DEPOT": ("Supplies", 0.65),
-    "STAPLES": ("Supplies", 0.65),
+    "HOME DEPOT": ("Office Supplies", 0.6),
+    "LOWES": ("Office Supplies", 0.6),
+    "AMAZON": ("Office Supplies", 0.6),
+    "OFFICE DEPOT": ("Office Supplies", 0.65),
+    "STAPLES": ("Office Supplies", 0.65),
     "UBER": ("Travel", 0.7),
     "LYFT": ("Travel", 0.7),
     "GAS STATION": ("Travel", 0.6),
@@ -30,13 +31,13 @@ KEYWORD_RULES = {
     "HOTEL": ("Travel", 0.75),
     "MOTEL": ("Travel", 0.75),
     "AIRBNB": ("Travel", 0.75),
-    "UTILITY": ("Utilities", 0.8),
-    "POWER": ("Utilities", 0.7),
-    "WATER": ("Utilities", 0.7),
-    "INTERNET": ("Utilities", 0.75),
-    "PHONE": ("Utilities", 0.7),
-    "RENT": ("Rent", 0.9),
-    "APARTMENT": ("Rent", 0.6),
+    "UTILITY": ("Rent & Utilities", 0.8),
+    "POWER": ("Rent & Utilities", 0.7),
+    "WATER": ("Rent & Utilities", 0.7),
+    "INTERNET": ("Rent & Utilities", 0.75),
+    "PHONE": ("Rent & Utilities", 0.7),
+    "RENT": ("Rent & Utilities", 0.9),
+    "APARTMENT": ("Rent & Utilities", 0.6),
     "INSURANCE": ("Insurance", 0.85),
     "TAX": ("Taxes & Licenses", 0.85),
     "PERMIT": ("Taxes & Licenses", 0.8),
@@ -61,7 +62,7 @@ def load_merchant_category_map(path: str = "data/mappings/merchant_category.csv"
             for row in reader:
                 merchant = normalize_merchant_name(row.get("merchant", ""), case="upper")
                 # Read category_name (human-readable) for exports
-                category = row.get("category_name", "").strip()
+                category = normalize_category_name(row.get("category_name", "").strip())
                 if merchant and category:
                     mapping[merchant] = category
     except Exception as e:
@@ -141,7 +142,9 @@ def get_learned_override(merchant: str, db_path: str = "data/store.db") -> Optio
         conn.close()
 
     if result:
-        return (result[0], 0.99)  # Learned overrides have highest confidence
+        category = normalize_category_name(result[0])
+        if category:
+            return (category, 0.99)  # Learned overrides have highest confidence
 
     return None
 
@@ -182,15 +185,18 @@ def categorize_record(record_id: str, db_path: str = "data/store.db") -> Tuple[O
     
     result = categorize_by_merchant_exact(merchant, merchant_map)
     if result:
-        return result
+        category = normalize_category_name(result[0]) or "Uncategorized"
+        return category, result[1]
     
     result = categorize_by_merchant_fuzzy(merchant, merchant_map)
     if result:
-        return result
+        category = normalize_category_name(result[0]) or "Uncategorized"
+        return category, result[1]
     
     result = categorize_by_keywords(merchant)
     if result:
-        return result
+        category = normalize_category_name(result[0]) or "Uncategorized"
+        return category, result[1]
     
     return "Uncategorized", 0.3
 
@@ -233,6 +239,7 @@ def categorize_all_records(db_path: str = "data/store.db") -> int:
 
 def save_category_override(record_id: str, category: str, db_path: str = "data/store.db"):
     """Save user's category override. This creates a learned rule for future matching."""
+    category = require_valid_category(category, field_name="category_final")
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
     
