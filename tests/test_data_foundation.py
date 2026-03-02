@@ -12,6 +12,15 @@ def test_mapping_precedence_keyword_overrides_mcc_and_external():
     )
     assert category == "Payroll & Contractors"
 
+    category2, reasons = mapping.resolve_category_with_reason(
+        merchant_raw="GUSTO PAYROLL*FEB",
+        description="monthly payroll run",
+        mcc="5812",
+        external_category="Food & Dining",
+    )
+    assert category2 == "Payroll & Contractors"
+    assert reasons and reasons[0].startswith("keyword:")
+
 
 def test_mapping_precedence_mcc_then_external_then_fallback():
     mcc_first = mapping.resolve_category_with_precedence(
@@ -34,6 +43,30 @@ def test_mapping_precedence_mcc_then_external_then_fallback():
         external_category=None,
     )
     assert fallback == "Other Expense"
+
+    c_mcc, r_mcc = mapping.resolve_category_with_reason(
+        merchant_raw="UNKNOWN MERCHANT",
+        mcc="5812",
+        external_category="Utilities & Services",
+    )
+    assert c_mcc == "Meals & Entertainment"
+    assert r_mcc == ["mcc:5812"]
+
+    c_ext, r_ext = mapping.resolve_category_with_reason(
+        merchant_raw="UNKNOWN MERCHANT",
+        mcc=None,
+        external_category="Utilities & Services",
+    )
+    assert c_ext == "Rent & Utilities"
+    assert r_ext == ["external:Utilities & Services"]
+
+    c_fb, r_fb = mapping.resolve_category_with_reason(
+        merchant_raw="UNKNOWN MERCHANT",
+        mcc=None,
+        external_category=None,
+    )
+    assert c_fb == "Other Expense"
+    assert r_fb == ["fallback:Other Expense"]
 
 
 def test_mapping_supports_mcc_description_mapping():

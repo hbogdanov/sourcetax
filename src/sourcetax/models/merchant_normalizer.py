@@ -15,15 +15,19 @@ Quick wins:
 """
 
 import re
-from typing import Dict, Tuple, Optional
+from typing import Dict, Optional, Tuple
 
 
-# Common POS/vendor prefixes to strip
+# Common single-token prefixes to strip
 JUNK_PREFIXES = {
-    "SQ", "POS", "POS\\*", "SQUARE",
-    "PAYPAL", "PAYPAL\\*",
+    "SQ",
+    "POS",
+    "SQUARE",
+    "PAYPAL",
     "STRIPE",
-    "HELP\\.", "SUPPORT\\.",
+    "HELP",
+    "SUPPORT",
+    "TST",
 }
 
 # Common suffixes to strip
@@ -69,9 +73,20 @@ MERCHANT_ALIASES = {
     "STAPLES": "Staples",
 }
 
-# Charge amount patterns (POS codes like "1234", phone-like tokens)
-CARD_AMOUNT_PATTERN = re.compile(r"[\d\s\-\(\)]{5,}")  # Card number, zip
-STORE_ID_PATTERN = re.compile(r"#\d{4,}|\d{4,}[AB]")  # Store IDs like #1234 or 5678A
+INTERMEDIARY_PREFIX_RE = re.compile(
+    r"^\s*(SQ|TST|PAYPAL|PP|POS|SQUARE)\s*\*?\s+",
+    re.IGNORECASE,
+)
+AMZN_PREFIX_RE = re.compile(
+    r"^\s*AMZN\s+(MKTP|MKTPLACE)\b",
+    re.IGNORECASE,
+)
+CARD_AMOUNT_PATTERN = re.compile(r"\b\d{2,4}[-\s]\d{2,4}[-\s]\d{2,4}\b")
+STORE_ID_PATTERN = re.compile(r"\b#\d{2,}\b|\b\d{4,}[A-Z]?\b")
+STORE_LABEL_PATTERN = re.compile(
+    r"\b(STORE|STR|LOCATION|LOC|TERMINAL|TERM|ID)\s*#?\s*\d+\b",
+    re.IGNORECASE,
+)
 
 
 def clean_merchant_text(merchant_raw: str) -> str:
@@ -87,25 +102,33 @@ def clean_merchant_text(merchant_raw: str) -> str:
     """
     if not merchant_raw:
         return ""
-    
-    text = merchant_raw.upper().strip()
-    
-    # Remove common punctuation
-    text = re.sub(r"[^\w\s]", " ", text)
-    
-    # Remove phone numbers and card patterns
+
+    text = merchant_raw.strip()
+
+    # Normalize common payment intermediaries/prefixes.
+    text = INTERMEDIARY_PREFIX_RE.sub("", text)
+    text = AMZN_PREFIX_RE.sub("AMZN ", text)
+
+    text = text.upper()
+
+    # Remove store/terminal labels and ids before punctuation clean.
+    text = re.sub(STORE_LABEL_PATTERN, " ", text)
     text = re.sub(CARD_AMOUNT_PATTERN, " ", text)
     text = re.sub(STORE_ID_PATTERN, " ", text)
-    
+
+    # Strip punctuation and collapse spacing.
+    text = re.sub(r"[^\w\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+
     # Remove known junk
     tokens = text.split()
     tokens = [t for t in tokens if t and t not in JUNK_PREFIXES and t not in JUNK_SUFFIXES]
-    
+
     # Remove common location suffixes
-    if tokens and tokens[-1] in {"CA", "NY", "TX", "FL", "IL", "PA", "OH"}:
+    while tokens and tokens[-1] in {"CA", "NY", "TX", "FL", "IL", "PA", "OH", "WA"}:
         tokens = tokens[:-1]
-    
-    return " ".join(tokens)
+
+    return re.sub(r"\s+", " ", " ".join(tokens)).strip()
 
 
 def apply_aliases(clean_text: str) -> str:

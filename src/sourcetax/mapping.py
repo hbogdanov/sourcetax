@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, Iterable, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
 BASE = Path(__file__).resolve().parents[2] / "data"
 EXTERNAL_MAP_PATH = BASE / "mappings" / "external_category_to_sourcetax_v1.json"
@@ -72,6 +72,64 @@ def _keyword_match(text: str, keyword_rules: Dict[str, str]) -> Optional[str]:
     return None
 
 
+def _keyword_match_with_reason(
+    text: str, keyword_rules: Dict[str, str]
+) -> Tuple[Optional[str], Optional[str]]:
+    if not text:
+        return None, None
+    t = text.upper()
+    for keyword, category in keyword_rules.items():
+        if keyword in t:
+            slug = keyword.lower().replace(" ", "_")
+            return category, f"keyword:{slug}"
+    return None, None
+
+
+def resolve_category_with_reason(
+    *,
+    merchant_raw: Optional[str] = None,
+    description: Optional[str] = None,
+    mcc: Optional[str] = None,
+    mcc_description: Optional[str] = None,
+    external_category: Optional[str] = None,
+    keyword_rules: Optional[Dict[str, str]] = None,
+    fallback: str = "Other Expense",
+) -> Tuple[str, List[str]]:
+    """Resolve SourceTax category and include mapping reasons.
+
+    Precedence:
+    1) keyword match in merchant/description
+    2) MCC code mapping
+    3) MCC description mapping
+    4) external category mapping
+    5) fallback
+    """
+    rules = keyword_rules or DEFAULT_KEYWORD_RULES
+    text_candidates: Iterable[str] = (
+        merchant_raw or "",
+        description or "",
+    )
+    for txt in text_candidates:
+        category, reason = _keyword_match_with_reason(txt, rules)
+        if category:
+            return category, [reason] if reason else ["keyword"]
+
+    mcc_category = map_mcc(mcc)
+    if mcc_category:
+        return mcc_category, [f"mcc:{str(mcc).strip()}"]
+
+    mcc_desc_category = map_mcc_description(mcc_description)
+    if mcc_desc_category:
+        desc_slug = str(mcc_description).strip().lower().replace(" ", "_")
+        return mcc_desc_category, [f"mcc_description:{desc_slug}"]
+
+    ext_category = map_external_category(external_category)
+    if ext_category:
+        return ext_category, [f"external:{str(external_category).strip()}"]
+
+    return fallback, [f"fallback:{fallback}"]
+
+
 def resolve_category_with_precedence(
     *,
     merchant_raw: Optional[str] = None,
@@ -85,26 +143,13 @@ def resolve_category_with_precedence(
     """Resolve SourceTax category using precedence:
     explicit keyword rules > MCC > external label mapping > fallback.
     """
-    rules = keyword_rules or DEFAULT_KEYWORD_RULES
-    text_candidates: Iterable[str] = (
-        merchant_raw or "",
-        description or "",
+    category, _ = resolve_category_with_reason(
+        merchant_raw=merchant_raw,
+        description=description,
+        mcc=mcc,
+        mcc_description=mcc_description,
+        external_category=external_category,
+        keyword_rules=keyword_rules,
+        fallback=fallback,
     )
-    for txt in text_candidates:
-        category = _keyword_match(txt, rules)
-        if category:
-            return category
-
-    mcc_category = map_mcc(mcc)
-    if mcc_category:
-        return mcc_category
-
-    mcc_desc_category = map_mcc_description(mcc_description)
-    if mcc_desc_category:
-        return mcc_desc_category
-
-    ext_category = map_external_category(external_category)
-    if ext_category:
-        return ext_category
-
-    return fallback
+    return category

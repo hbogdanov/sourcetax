@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 
 def normalize_merchant_components(value: str | None) -> Tuple[str, str, Optional[str]]:
@@ -37,3 +37,27 @@ def normalize_merchant(value: str | None, case: str = "lower") -> str:
 def normalize_merchant_name(value: str | None, case: str = "lower") -> str:
     """Backward-compatible alias for the shared merchant normalizer."""
     return normalize_merchant(value, case=case)
+
+
+def generate_noisy_merchant_raw(
+    canonical_merchant: str,
+    n: int = 5,
+    *,
+    seed: Optional[int] = None,
+    acquirer_prob: float = 0.45,
+    store_location_prob: float = 0.65,
+    id_suffix_prob: float = 0.35,
+    truncation_prob: float = 0.15,
+) -> List[str]:
+    """Generate noisy merchant_raw variants for synthetic/matching workflows."""
+    from sourcetax import merchant_noise
+
+    return merchant_noise.generate_noisy_merchant_variants(
+        canonical_merchant,
+        n=n,
+        seed=seed,
+        acquirer_prob=acquirer_prob,
+        store_location_prob=store_location_prob,
+        id_suffix_prob=id_suffix_prob,
+        truncation_prob=truncation_prob,
+    )

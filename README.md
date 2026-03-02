@@ -36,6 +36,8 @@ An AI-driven pipeline that ingests transaction data from banks, POS systems, and
   - `tools/import_dc_pcard.py` (DC ArcGIS purchase card feed with paged API ingestion)
   - `tools/import_receipts_sroie.py` (SROIE receipt OCR realism importer)
 - Added mapping profiler `tools/staging_mapping_profile.py` to fill category/MCC mappings from observed staging values
+- Added explainable mapping output (`mapping_reason` / `evidence_keys`) via `tools/build_training_rows_from_staging.py`
+- Added stronger merchant normalization rules and reusable noise generator (`src/sourcetax/merchant_noise.py`)
 
 ## Quick Start
 
@@ -98,6 +100,7 @@ python tools/import_hf_mitulshah.py --staging-db data/staging.db --max-rows 1000
 python tools/import_dc_pcard.py --staging-db data/staging.db --max-rows 50000
 python tools/import_receipts_sroie.py --staging-db data/staging.db --max-rows 5000
 python tools/staging_mapping_profile.py --staging-db data/staging.db --limit 100
+python tools/build_training_rows_from_staging.py --staging-db data/staging.db --out data/ml/staging_training_rows.jsonl
 ```
 
 `make smoke` runs a lightweight end-to-end flow and best-effort evaluation without requiring EasyOCR or SBERT.
@@ -231,6 +234,15 @@ Do not try to complete mapping tables upfront. Fill mappings from values that ac
 Notes:
 - `mcc_to_sourcetax_v1.json` supports both numeric MCC codes and `mcc_description` strings.
 - Mapping precedence supports keyword rules, MCC code, MCC description, then external category fallback.
+- `build_training_rows_from_staging.py` emits `category_mapped` plus `mapping_reason`/`evidence_keys` (e.g., `keyword:uber`, `mcc:5812`, `external:Food & Dining`).
+
+## Merchant Normalization + Noise Model
+
+- Merchant normalization is centralized in `src/sourcetax/models/merchant_normalizer.py` and used through `src/sourcetax/normalization.py`.
+- Rules include punctuation stripping, space collapsing, store/terminal ID removal, and intermediary normalization (`SQ *`, `TST*`, `PAYPAL *`, `AMZN MKTP`).
+- Synthetic/noisy merchant variant generation is available via:
+  - `sourcetax.normalization.generate_noisy_merchant_raw(...)`
+  - `src/sourcetax/merchant_noise.py`
 
 ## Phase Completion Status
 
