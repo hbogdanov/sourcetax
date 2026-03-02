@@ -31,6 +31,10 @@ An AI-driven pipeline that ingests transaction data from banks, POS systems, and
 - Added deterministic mapping scaffolds (`data/mappings/external_category_to_sourcetax_v1.json`, `data/mappings/mcc_to_sourcetax_v1.json`)
 - Added staging-layer utilities (`src/sourcetax/staging.py`) and mapping precedence utilities (`src/sourcetax/mapping.py`)
 - Added gold-set balance report CLI (`tools/gold_balance_report.py`) and enforcement tests (`tests/test_data_foundation.py`, `tests/test_taxonomy_enforcement.py`)
+- Added staging importers:
+  - `tools/import_hf_mitulshah.py` (HF transaction corpus backbone)
+  - `tools/import_dc_pcard.py` (DC ArcGIS purchase card feed with paged API ingestion)
+  - `tools/import_receipts_sroie.py` (SROIE receipt OCR realism importer)
 
 ## Quick Start
 
@@ -89,6 +93,9 @@ make smoke-strict
 make phase4
 make test
 python tools/gold_balance_report.py --target 200 --batch-size 25
+python tools/import_hf_mitulshah.py --staging-db data/staging.db --max-rows 100000
+python tools/import_dc_pcard.py --staging-db data/staging.db --max-rows 50000
+python tools/import_receipts_sroie.py --staging-db data/staging.db --max-rows 5000
 ```
 
 `make smoke` runs a lightweight end-to-end flow and best-effort evaluation without requiring EasyOCR or SBERT.
@@ -179,6 +186,35 @@ SourceTax now uses a single category contract at `data/taxonomy/sourcetax_v1.jso
 - Mapping scaffolds are stored in:
   - `data/mappings/external_category_to_sourcetax_v1.json`
   - `data/mappings/mcc_to_sourcetax_v1.json`
+
+## Staging Importers (Data Pipeline)
+
+Staging DB path: `data/staging.db` (tables: `staging_transactions`, `staging_receipts`)
+
+- HF transaction backbone (`mitulshah/transaction-categorization`):
+  - Command: `python tools/import_hf_mitulshah.py --staging-db data/staging.db --max-rows 100000`
+  - Mapping:
+    - `source='hf_mitulshah'`
+    - `description <- transaction_description`
+    - `category_external <- category`
+    - `currency/country` preserved in `raw_payload_json`
+
+- DC purchase card feed (ArcGIS REST):
+  - Command: `python tools/import_dc_pcard.py --staging-db data/staging.db --max-rows 50000`
+  - Mapping:
+    - `source='dc_pcard'`
+    - `merchant_raw <- VENDOR_NAME`
+    - `amount <- -abs(TRANSACTION_AMOUNT)` (expense convention)
+    - `mcc_description <- MCC_DESCRIPTION`
+
+- SROIE receipt corpus (`jsdnrs/ICDAR2019-SROIE`):
+  - Command: `python tools/import_receipts_sroie.py --staging-db data/staging.db --max-rows 5000`
+  - Mapping:
+    - `source='sroie'`
+    - `ocr_text` reconstructed from OCR tokens/entities
+    - `total` parsed from `entities.total`
+    - `merchant_raw <- entities.company` (fallback to OCR header token)
+    - full source annotation preserved in `raw_payload_json`
 
 ## Phase Completion Status
 

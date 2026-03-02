@@ -27,3 +27,6 @@ tmp/
 *.pickle
 .cache/
 .huggingface/
+
+# Local planning/docs PDFs (not project source artifacts)
+SourceTax dataset landscape for small*business transaction categorization.pdf

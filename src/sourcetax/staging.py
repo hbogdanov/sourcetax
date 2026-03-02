@@ -120,6 +120,52 @@ def insert_staging_transaction(
     conn.close()
 
 
+def insert_staging_transactions(
+    records: list[Dict[str, Any]],
+    path: Path = DEFAULT_STAGING_DB,
+    batch_size: int = 1000,
+) -> int:
+    """Insert many bank-like staging rows in batches for fast loaders."""
+    if not records:
+        return 0
+    ensure_staging_db(path)
+    conn = sqlite3.connect(str(path))
+    cur = conn.cursor()
+
+    sql = """
+        INSERT INTO staging_transactions (
+            source, source_record_id, txn_ts, amount, currency, merchant_raw,
+            description, mcc, mcc_description, category_external, subcategory_external,
+            raw_payload_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    inserted = 0
+    for i in range(0, len(records), max(batch_size, 1)):
+        chunk = records[i : i + max(batch_size, 1)]
+        params = [
+            (
+                rec.get("source"),
+                rec.get("source_record_id"),
+                rec.get("txn_ts"),
+                rec.get("amount"),
+                rec.get("currency"),
+                rec.get("merchant_raw"),
+                rec.get("description"),
+                rec.get("mcc"),
+                rec.get("mcc_description"),
+                rec.get("category_external"),
+                rec.get("subcategory_external"),
+                _json_dumps(rec.get("raw_payload_json"), {}),
+            )
+            for rec in chunk
+        ]
+        cur.executemany(sql, params)
+        inserted += len(params)
+    conn.commit()
+    conn.close()
+    return inserted
+
+
 def insert_staging_receipt(record: Dict[str, Any], path: Path = DEFAULT_STAGING_DB) -> None:
     """Insert a receipt-like staging document row."""
     ensure_staging_db(path)
@@ -149,6 +195,49 @@ def insert_staging_receipt(record: Dict[str, Any], path: Path = DEFAULT_STAGING_
     conn.close()
 
 
+def insert_staging_receipts(
+    records: list[Dict[str, Any]],
+    path: Path = DEFAULT_STAGING_DB,
+    batch_size: int = 500,
+) -> int:
+    """Insert many receipt-like staging rows in batches."""
+    if not records:
+        return 0
+    ensure_staging_db(path)
+    conn = sqlite3.connect(str(path))
+    cur = conn.cursor()
+
+    sql = """
+        INSERT INTO staging_receipts (
+            source, source_record_id, receipt_ts, merchant_raw, total, tax, currency,
+            ocr_text, structured_fields_json, raw_payload_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    inserted = 0
+    for i in range(0, len(records), max(batch_size, 1)):
+        chunk = records[i : i + max(batch_size, 1)]
+        params = [
+            (
+                rec.get("source"),
+                rec.get("source_record_id"),
+                rec.get("receipt_ts"),
+                rec.get("merchant_raw"),
+                rec.get("total"),
+                rec.get("tax"),
+                rec.get("currency"),
+                rec.get("ocr_text"),
+                _json_dumps(rec.get("structured_fields_json"), {}),
+                _json_dumps(rec.get("raw_payload_json"), {}),
+            )
+            for rec in chunk
+        ]
+        cur.executemany(sql, params)
+        inserted += len(params)
+    conn.commit()
+    conn.close()
+    return inserted
+
+
 def get_staging_counts(path: Path = DEFAULT_STAGING_DB) -> Dict[str, int]:
     """Return row counts for quick ingestion validation."""
     ensure_staging_db(path)
@@ -160,4 +249,3 @@ def get_staging_counts(path: Path = DEFAULT_STAGING_DB) -> Dict[str, int]:
     receipts = int(cur.fetchone()[0])
     conn.close()
     return {"staging_transactions": txns, "staging_receipts": receipts}
-
