@@ -8,6 +8,8 @@ import sqlite3
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 import csv
+import json
+from datetime import datetime, timezone
 from .normalization import normalize_merchant_name
 from .taxonomy import normalize_category_name, require_valid_category
 
@@ -156,7 +158,7 @@ def categorize_record(record_id: str, db_path: str = "data/store.db") -> Tuple[O
     2. Exact merchant match
     3. Fuzzy merchant match
     4. Keyword match
-    5. Uncategorized
+    5. Other Expense
     
     Returns: (category, confidence)
     """
@@ -171,7 +173,7 @@ def categorize_record(record_id: str, db_path: str = "data/store.db") -> Tuple[O
     conn.close()
     
     if not row:
-        return "Uncategorized", 0.0
+        return "Other Expense", 0.0
     
     merchant = row[0]
     
@@ -185,20 +187,20 @@ def categorize_record(record_id: str, db_path: str = "data/store.db") -> Tuple[O
     
     result = categorize_by_merchant_exact(merchant, merchant_map)
     if result:
-        category = normalize_category_name(result[0]) or "Uncategorized"
+        category = normalize_category_name(result[0]) or "Other Expense"
         return category, result[1]
     
     result = categorize_by_merchant_fuzzy(merchant, merchant_map)
     if result:
-        category = normalize_category_name(result[0]) or "Uncategorized"
+        category = normalize_category_name(result[0]) or "Other Expense"
         return category, result[1]
     
     result = categorize_by_keywords(merchant)
     if result:
-        category = normalize_category_name(result[0]) or "Uncategorized"
+        category = normalize_category_name(result[0]) or "Other Expense"
         return category, result[1]
-    
-    return "Uncategorized", 0.3
+
+    return "Other Expense", 0.3
 
 
 def categorize_all_records(db_path: str = "data/store.db") -> int:
@@ -242,11 +244,24 @@ def save_category_override(record_id: str, category: str, db_path: str = "data/s
     category = require_valid_category(category, field_name="category_final")
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    
+
+    cur.execute("SELECT raw_payload FROM canonical_records WHERE id = ?", (record_id,))
+    row = cur.fetchone()
+    raw_payload = {}
+    if row and row[0]:
+        try:
+            parsed = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+            if isinstance(parsed, dict):
+                raw_payload = parsed
+        except Exception:
+            raw_payload = {}
+    raw_payload["label_source"] = "human"
+    raw_payload["labeled_at_utc"] = datetime.now(timezone.utc).isoformat()
+
     cur.execute(
-        "UPDATE canonical_records SET category_final = ? WHERE id = ?",
-        (category, record_id),
+        "UPDATE canonical_records SET category_final = ?, raw_payload = ? WHERE id = ?",
+        (category, json.dumps(raw_payload, ensure_ascii=False), record_id),
     )
-    
+
     conn.commit()
     conn.close()

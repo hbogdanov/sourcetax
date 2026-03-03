@@ -14,6 +14,7 @@ from dataclasses import dataclass
 import csv
 from difflib import SequenceMatcher
 from sourcetax.schema import CanonicalRecord
+from sourcetax.gold import filter_human_labeled_gold
 
 
 @dataclass
@@ -115,7 +116,10 @@ def load_gold_set(gold_path: Path = None) -> List[Dict]:
             for line in f:
                 if line.strip():
                     records.append(json.loads(line))
-    return records
+    filtered, skipped = filter_human_labeled_gold(records)
+    if skipped:
+        print(f"WARNING: skipped {skipped} non-human-labeled records from gold dataset.")
+    return filtered
 
 
 def eval_category_accuracy(gold_records: List[Dict]) -> Tuple[float, Dict[str, float]]:

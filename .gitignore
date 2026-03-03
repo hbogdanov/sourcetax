@@ -16,7 +16,9 @@ venv/
 
 # Data + outputs
 data/store.db
+data/staging.db
 data/forms/
+data/receipts/
 data/combined_dataset/
 outputs/
 reports/
@@ -25,6 +27,7 @@ tmp/
 # Large dataset artifacts (generated, not source)
 *.parquet
 *.pickle
+*.pkl
 .cache/
 .huggingface/
 

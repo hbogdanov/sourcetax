@@ -1,4 +1,5 @@
 from sourcetax.normalization import generate_noisy_merchant_raw, normalize_merchant_name
+from sourcetax.models.merchant_normalizer import load_merchant_aliases
 
 
 def test_merchant_normalization_handles_intermediaries_and_ids():
@@ -19,3 +20,8 @@ def test_noise_generator_produces_variants():
         assert v == v.upper()
         assert "STARBUCKS" in v or len(v) >= 4
 
+
+def test_aliases_are_loaded_from_data_file():
+    aliases = load_merchant_aliases()
+    assert aliases.get("STARBUCKS") == "Starbucks"
+    assert aliases.get("AMZN MKTP") == "Amazon"

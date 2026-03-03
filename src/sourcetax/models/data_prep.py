@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import List, Tuple, Dict
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sourcetax.gold import filter_human_labeled_gold
 
 
 def load_gold_set(gold_path: Path = None) -> List[Dict]:
@@ -23,7 +24,10 @@ def load_gold_set(gold_path: Path = None) -> List[Dict]:
             for line in f:
                 if line.strip():
                     records.append(json.loads(line))
-    return records
+    filtered, skipped = filter_human_labeled_gold(records)
+    if skipped:
+        print(f"Filtered {skipped} non-human-labeled records from gold set.")
+    return filtered
 
 
 def prepare_ml_records(gold_records: List[Dict]) -> pd.DataFrame:

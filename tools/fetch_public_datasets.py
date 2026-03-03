@@ -80,9 +80,24 @@ def main():
         if fetch_hf_dataset(candidate, split="train", dest=funsd_dest, sample_n=200):
             break
 
-    print(
-        "Done. Note: Kaggle-hosted retail datasets require Kaggle API credentials; see README for manual steps."
-    )
+    # Best-effort dataset manifest with hashes for reproducibility.
+    try:
+        from build_dataset_manifest import build_manifest, collect_files, ROOT as MANIFEST_ROOT
+
+        files = []
+        for rel in ["data/receipts", "data/forms"]:
+            files.extend(collect_files(MANIFEST_ROOT / rel))
+        manifest = build_manifest(files)
+        manifest["roots"] = ["data/receipts", "data/forms"]
+        out_path = MANIFEST_ROOT / "data" / "dataset_manifest.json"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with out_path.open("w", encoding="utf-8") as fh:
+            json.dump(manifest, fh, indent=2)
+        print(f"Wrote dataset manifest: {out_path}")
+    except Exception as e:
+        print("Dataset manifest generation skipped:", e)
+
+    print("Done. Note: Kaggle-hosted retail datasets require Kaggle API credentials; see README for manual steps.")
 
 
 if __name__ == "__main__":

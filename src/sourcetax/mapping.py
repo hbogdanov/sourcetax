@@ -12,6 +12,38 @@ MCC_MAP_PATH = BASE / "mappings" / "mcc_to_sourcetax_v1.json"
 
 
 DEFAULT_KEYWORD_RULES: Dict[str, str] = {
+    # Vehicle
+    "SHELL": "Vehicle Expenses",
+    "CHEVRON": "Vehicle Expenses",
+    "EXXON": "Vehicle Expenses",
+    "BP": "Vehicle Expenses",
+    "MARATHON": "Vehicle Expenses",
+    "QT": "Vehicle Expenses",
+    "RACETRAC": "Vehicle Expenses",
+    "GAS": "Vehicle Expenses",
+    # Travel
+    "DELTA": "Travel",
+    "UNITED": "Travel",
+    "AMERICAN": "Travel",
+    "SOUTHWEST": "Travel",
+    "AIRBNB": "Travel",
+    "MARRIOTT": "Travel",
+    "HILTON": "Travel",
+    "HYATT": "Travel",
+    "HOTEL": "Travel",
+    # Meals
+    "STARBUCKS": "Meals & Entertainment",
+    "MCDONALD": "Meals & Entertainment",
+    "DOORDASH": "Meals & Entertainment",
+    "UBER EATS": "Meals & Entertainment",
+    "RESTAURANT": "Meals & Entertainment",
+    # Financial fees
+    "ATM FEE": "Financial Fees",
+    "OVERDRAFT": "Financial Fees",
+    "INTEREST": "Financial Fees",
+    "WIRE FEE": "Financial Fees",
+    "SERVICE FEE": "Financial Fees",
+    # Existing
     "PAYROLL": "Payroll & Contractors",
     "GUSTO": "Payroll & Contractors",
     "ADP": "Payroll & Contractors",

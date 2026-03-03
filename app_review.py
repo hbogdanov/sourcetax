@@ -276,8 +276,9 @@ def build_review_queue_df(all_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def category_options() -> List[str]:
-    options = taxonomy.load_sourcetax_categories()
-    return options if options else ["Uncategorized"]
+    options = taxonomy.load_sourcetax_categories(include_uncategorized=False)
+    # UI-only placeholder; never persisted as final label.
+    return ["Uncategorized"] + options if options else ["Uncategorized"]
 
 
 def render_header() -> None:
@@ -433,16 +434,18 @@ def render_record_detail_panel(record: Dict[str, Any], queue_row: Optional[Dict[
         with x2:
             if st.button("Approve", key=f"approve_{rec.get('id')}", width="stretch"):
                 try:
-                    categorization.save_category_override(rec["id"], current, DB_PATH)
-                    st.success(f"Saved category: {current}")
+                    to_save = "Other Expense" if current == "Uncategorized" else current
+                    categorization.save_category_override(rec["id"], to_save, DB_PATH)
+                    st.success(f"Saved category: {to_save}")
                     st.rerun()
                 except ValueError as exc:
                     st.error(str(exc))
         with x3:
             if st.button("Save", key=f"save_{rec.get('id')}", width="stretch"):
                 try:
-                    categorization.save_category_override(rec["id"], override, DB_PATH)
-                    st.success(f"Saved category: {override}")
+                    to_save = "Other Expense" if override == "Uncategorized" else override
+                    categorization.save_category_override(rec["id"], to_save, DB_PATH)
+                    st.success(f"Saved category: {to_save}")
                     st.rerun()
                 except ValueError as exc:
                     st.error(str(exc))

@@ -4,17 +4,17 @@ Rule-based merchant normalization.
 Cleans raw merchant strings into canonical form.
 Handles:
 - Whitespace, case, punctuation
-- POS codes (SQ *), location codes (NYC, CA)
-- Phone numbers, store IDs
-- Common aliases
-
-Quick wins:
-- "SQ *STARBUCKS" → "Starbucks"
-- "UBER *TRIP" → "Uber"
-- "AMZN MKTP MERCHANT" → "Amazon"
+- POS/intermediary prefixes (SQ *, TST*, PAYPAL *, AMZN MKTP)
+- Phone/store/terminal ids
+- Data-driven alias mapping from file
 """
 
+from __future__ import annotations
+
+import json
 import re
+from functools import lru_cache
+from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 
@@ -32,46 +32,22 @@ JUNK_PREFIXES = {
 
 # Common suffixes to strip
 JUNK_SUFFIXES = {
-    "CA", "NY", "TX", "FL",  # States
-    "COM", "ORG", "NET",      # TLDs
-    "HELP", "SUPPORT", "INFO", "PHONE", "BILLING",
+    "CA",
+    "NY",
+    "TX",
+    "FL",  # States
+    "COM",
+    "ORG",
+    "NET",  # TLDs
+    "HELP",
+    "SUPPORT",
+    "INFO",
+    "PHONE",
+    "BILLING",
 }
 
-# Merchant aliases: raw → canonical
-MERCHANT_ALIASES = {
-    "STARBUCKS": "Starbucks",
-    "SBUX": "Starbucks",
-    "AMAZON": "Amazon",
-    "AMZN": "Amazon",
-    "AMZN MKTP": "Amazon",
-    "WHOLE FOODS": "Whole Foods",
-    "WHOLEFDS": "Whole Foods",
-    "TRADER JOES": "Trader Joe's",
-    "TRADER JOS": "Trader Joe's",
-    "COSTCO": "Costco",
-    "UBER": "Uber",
-    "UBER EATS": "Uber Eats",
-    "LYFT": "Lyft",
-    "SHELL": "Shell",
-    "CHEVRON": "Chevron",
-    "EXXON": "Exxon",
-    "HOTEL MARRIOTT": "Marriott",
-    "MARRIOTT": "Marriott",
-    "HILTON": "Hilton",
-    "HYATT": "Hyatt",
-    "AIRBNB": "Airbnb",
-    "SPOTIFY": "Spotify",
-    "NETFLIX": "Netflix",
-    "APPLE": "Apple",
-    "GOOGLE": "Google",
-    "MICROSOFT": "Microsoft",
-    "ADOBE": "Adobe",
-    "HOME DEPOT": "Home Depot",
-    "LOWES": "Lowes",
-    "BEST BUY": "Best Buy",
-    "OFFICE DEPOT": "Office Depot",
-    "STAPLES": "Staples",
-}
+BASE = Path(__file__).resolve().parents[3]
+MERCHANT_ALIASES_PATH = BASE / "data" / "mappings" / "merchant_aliases.json"
 
 INTERMEDIARY_PREFIX_RE = re.compile(
     r"^\s*(SQ|TST|PAYPAL|PP|POS|SQUARE)\s*\*?\s+",
@@ -89,16 +65,41 @@ STORE_LABEL_PATTERN = re.compile(
 )
 
 
+@lru_cache(maxsize=1)
+def load_merchant_aliases(path: Optional[str] = None) -> Dict[str, str]:
+    """Load aliases from data file so alias maintenance does not require code edits."""
+    p = Path(path) if path else MERCHANT_ALIASES_PATH
+    if not p.exists():
+        return {}
+    try:
+        with p.open("r", encoding="utf-8") as fh:
+            raw = json.load(fh)
+    except Exception:
+        return {}
+
+    if not isinstance(raw, dict):
+        return {}
+
+    aliases: Dict[str, str] = {}
+    for k, v in raw.items():
+        key = str(k).strip().upper()
+        val = str(v).strip()
+        if key and val:
+            aliases[key] = val
+    return aliases
+
+
 def clean_merchant_text(merchant_raw: str) -> str:
     """
     Clean raw merchant string.
-    
+
     Steps:
-    1. Uppercase
-    2. Strip punctuation (except spaces)
-    3. Remove junk tokens
-    4. Remove phone/card numbers
-    5. Collapse multiple spaces
+    1. Normalize known intermediary prefixes
+    2. Uppercase
+    3. Remove store/terminal/ID patterns
+    4. Strip punctuation
+    5. Remove junk tokens
+    6. Collapse whitespace
     """
     if not merchant_raw:
         return ""
@@ -133,86 +134,33 @@ def clean_merchant_text(merchant_raw: str) -> str:
 
 def apply_aliases(clean_text: str) -> str:
     """Apply merchant aliases to standardize brand names."""
-    for alias, canonical in sorted(MERCHANT_ALIASES.items(), key=lambda x: -len(x[0])):
-        # Match whole alias in cleaned text
+    aliases = load_merchant_aliases()
+    for alias, canonical in sorted(aliases.items(), key=lambda x: -len(x[0])):
         if alias in clean_text:
-            # Replace and return first match
             return canonical
-    
     return clean_text
 
 
 def extract_root_merchant(clean_text: str, top_n: int = 2) -> str:
-    """
-    Extract first N tokens as "root" merchant name.
-    
-    Examples:
-    "STARBUCKS COFFEE 123" → "STARBUCKS COFFEE" (top_n=2)
-    "UBER TRIP SFO" → "UBER TRIP"
-    """
+    """Extract first N tokens as a root merchant signature."""
     tokens = clean_text.split()[:top_n]
     return " ".join(tokens) if tokens else "UNKNOWN"
 
 
-def normalize_merchant(
-    merchant_raw: str,
-) -> Tuple[str, str, Optional[str]]:
+def normalize_merchant(merchant_raw: str) -> Tuple[str, str, Optional[str]]:
     """
     Normalize a raw merchant string.
-    
-    Args:
-        merchant_raw: Raw merchant string from transaction
-    
+
     Returns:
-        (merchant_clean, merchant_root, merchant_brand)
-        
-        - merchant_clean: Cleaned version of raw
-        - merchant_root: First 2 tokens (category signal)
-        - merchant_brand: Canonical brand if matched, else None
+      (merchant_clean, merchant_root, merchant_brand)
     """
     if not merchant_raw:
         return "", "", None
-    
-    # Step 1: Clean junk
+
     clean = clean_merchant_text(merchant_raw)
-    
-    # Step 2: Apply aliases
     aliased = apply_aliases(clean)
-    
-    # Step 3: Extract root
     root = extract_root_merchant(clean)
-    
-    # Check if we found an alias
-    brand = None
-    if aliased != clean:  # An alias was applied
-        brand = aliased
-    
+
+    brand = aliased if aliased != clean else None
     return clean, root, brand
 
-
-def main():
-    """Test merchant normalization."""
-    test_cases = [
-        "SQ *STARBUCKS COFFEE 123 SF CA",
-        "UBER *TRIP HELP.UBER.COM",
-        "PAYPAL *SPOTIFY PREMIUM",
-        "AMZN MKTP MERCHANT LLC",
-        "WHOLEFDS MKT 10234 NYC NY",
-        "CHEVRON GAS #1234 LOS ANGELES CA",
-        "SHELL OIL STATION 5678 TX",
-    ]
-    
-    print("=" * 80)
-    print("MERCHANT NORMALIZATION TEST")
-    print("=" * 80)
-    
-    for raw in test_cases:
-        clean, root, brand = normalize_merchant(raw)
-        print(f"\nRaw:   {raw}")
-        print(f"Clean: {clean}")
-        print(f"Root:  {root}")
-        print(f"Brand: {brand}")
-
-
-if __name__ == "__main__":
-    main()

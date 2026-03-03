@@ -78,11 +78,13 @@ def load_sourcetax_taxonomy(path: Optional[str] = None) -> List[Dict]:
         return json.load(fh)
 
 
-def load_sourcetax_categories(path: Optional[str] = None) -> List[str]:
+def load_sourcetax_categories(path: Optional[str] = None, include_uncategorized: bool = False) -> List[str]:
     categories = []
     for row in load_sourcetax_taxonomy(path):
         name = str(row.get("name", "")).strip()
         if name:
+            if not include_uncategorized and name.lower() == "uncategorized":
+                continue
             categories.append(name)
     return categories
 
@@ -94,7 +96,7 @@ def normalize_category_name(category: Optional[str], path: Optional[str] = None)
     if not raw:
         return None
     canonical = _CATEGORY_ALIASES.get(raw, raw)
-    allowed = load_sourcetax_categories(path)
+    allowed = load_sourcetax_categories(path, include_uncategorized=False)
     allowed_ci = {c.lower(): c for c in allowed}
     return allowed_ci.get(canonical.lower())
 

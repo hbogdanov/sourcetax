@@ -44,7 +44,7 @@ def _insert_min_record(db_path: Path, record_id: str, category_pred: Optional[st
 
 def test_taxonomy_contract_categories_available():
     categories = taxonomy.load_sourcetax_categories()
-    assert "Uncategorized" in categories
+    assert "Uncategorized" not in categories
     assert "Meals & Entertainment" in categories
     assert taxonomy.is_valid_category("Rent & Utilities")
     assert taxonomy.normalize_category_name("Meals and Lodging") == "Meals & Entertainment"
@@ -76,6 +76,6 @@ def test_exports_emit_taxonomy_categories_only(tmp_path: Path):
     cats = [r["Category"] for r in rows]
 
     assert "Rent & Utilities" in cats
-    assert "Uncategorized" in cats
+    assert "Other Expense" in cats
     for c in cats:
         assert taxonomy.is_valid_category(c)

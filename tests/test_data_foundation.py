@@ -79,6 +79,32 @@ def test_mapping_supports_mcc_description_mapping():
     assert category == "Meals & Entertainment"
 
 
+def test_transportation_external_split_with_keyword_override():
+    # Default external mapping now favors Vehicle Expenses.
+    c_default, r_default = mapping.resolve_category_with_reason(
+        merchant_raw="UNKNOWN MERCHANT",
+        external_category="Transportation",
+    )
+    assert c_default == "Vehicle Expenses"
+    assert r_default == ["external:Transportation"]
+
+    # Travel keywords should override external mapping.
+    c_travel, r_travel = mapping.resolve_category_with_reason(
+        merchant_raw="DELTA AIR LINES",
+        external_category="Transportation",
+    )
+    assert c_travel == "Travel"
+    assert r_travel[0].startswith("keyword:")
+
+    # Vehicle keywords should still resolve to Vehicle Expenses.
+    c_vehicle, r_vehicle = mapping.resolve_category_with_reason(
+        merchant_raw="SHELL GAS STATION",
+        external_category="Transportation",
+    )
+    assert c_vehicle == "Vehicle Expenses"
+    assert r_vehicle[0].startswith("keyword:")
+
+
 def test_staging_create_insert_and_count(tmp_path: Path):
     db_path = tmp_path / "staging.db"
     staging.ensure_staging_db(db_path)

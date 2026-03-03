@@ -15,6 +15,5 @@
   {"code": "TAX", "name": "Taxes & Licenses"},
   {"code": "PAY", "name": "Payroll & Contractors"},
   {"code": "EDU", "name": "Education & Training"},
-  {"code": "OTH", "name": "Other Expense"},
-  {"code": "UNCAT", "name": "Uncategorized"}
+  {"code": "OTH", "name": "Other Expense"}
 ]

@@ -7,6 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from .taxonomy import load_merchant_map, normalize_category_name
 from .categorization import KEYWORD_RULES
+from .gold import is_human_labeled_gold_record
 
 
 PIPELINE_VERSION = "phase4"
@@ -70,7 +71,7 @@ def _effective_category(record: Dict[str, Any]) -> str:
     pred_cat = normalize_category_name(record.get("category_pred"))
     if pred_cat:
         return pred_cat
-    return "Uncategorized"
+    return "Other Expense"
 
 
 def _to_record_dict(row: sqlite3.Row) -> Dict[str, Any]:
@@ -210,7 +211,7 @@ def export_transactions_enriched_csv(
 def _schedule_c_account_name(category: str, direction: str) -> str:
     if direction == "income":
         return "Income"
-    return category or "Uncategorized"
+    return category or "Other Expense"
 
 
 def export_gl_lines_csv(
@@ -346,7 +347,7 @@ def export_audit_trail_jsonl(
             elif rec.get("category_pred"):
                 decision_reason["why"] = "predicted category present"
             else:
-                decision_reason["why"] = "default Uncategorized"
+                decision_reason["why"] = "fallback category applied (Other Expense)"
 
             audit_row = {
                 "transaction_id": rec.get("id"),
@@ -634,6 +635,7 @@ def export_gold_transactions_jsonl(
     mode = "a" if append else "w"
     exported = 0
     skipped_existing = 0
+    skipped_non_human = 0
 
     with outp.open(mode, encoding="utf-8") as fh:
         for row in rows:
@@ -649,6 +651,16 @@ def export_gold_transactions_jsonl(
                     raw_payload = {"raw_payload_text": raw_payload}
             if not isinstance(raw_payload, dict):
                 raw_payload = {}
+
+            candidate = {
+                "id": row["id"],
+                "source": row["source"],
+                "category_final": row["category_final"],
+                "raw_payload": raw_payload,
+            }
+            if not is_human_labeled_gold_record(candidate):
+                skipped_non_human += 1
+                continue
 
             category_final = normalize_category_name(row["category_final"])
             if not category_final:
@@ -676,5 +688,6 @@ def export_gold_transactions_jsonl(
         "path": str(outp),
         "exported": exported,
         "skipped_existing": skipped_existing,
+        "skipped_non_human": skipped_non_human,
         "total_after": count_gold_records(str(outp)),
     }
