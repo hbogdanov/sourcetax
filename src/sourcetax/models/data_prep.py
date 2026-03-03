@@ -41,7 +41,7 @@ def prepare_ml_records(gold_records: List[Dict]) -> pd.DataFrame:
     data = []
     
     for record in gold_records:
-        category = record.get("category_final")
+        category = record.get("sourcetax_category_v1") or record.get("category_final")
         
         # Only use records with ground-truth labels
         if not category:

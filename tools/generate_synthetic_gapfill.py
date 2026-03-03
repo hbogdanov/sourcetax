@@ -21,7 +21,7 @@ import argparse
 import calendar
 import random
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -42,6 +42,20 @@ class CategoryTemplate:
 
 
 GAPFILL_TEMPLATES: List[CategoryTemplate] = [
+    CategoryTemplate(
+        category="Financial Fees",
+        merchants=["BANK SERVICE CHARGES", "WIRE PROCESSING BANK", "PAYMENT PROCESSOR FEES"],
+        amount_min=5.0,
+        amount_max=450.0,
+        cadence="monthly",
+        channels=["ach", "wire", "card"],
+        mcc_descriptions=["PAYMENT SERVICE PROVIDERS", "BANK FEES", "FINANCIAL INSTITUTION FEES"],
+        memo_templates=[
+            "Monthly account service fee {month}",
+            "Wire transfer fee {month}",
+            "Processor settlement fee {month}",
+        ],
+    ),
     CategoryTemplate(
         category="COGS",
         merchants=[
@@ -101,6 +115,40 @@ GAPFILL_TEMPLATES: List[CategoryTemplate] = [
             "General liability premium {month}",
             "Workers comp premium {month}",
             "Commercial auto policy payment {month}",
+        ],
+    ),
+    CategoryTemplate(
+        category="Vehicle Expenses",
+        merchants=[
+            "SHELL",
+            "CHEVRON",
+            "EXXON",
+            "BP",
+            "MARATHON",
+            "SUNOCO",
+            "RACETRAC",
+            "AUTOZONE",
+            "NAPA AUTO PARTS",
+            "JIFFY LUBE",
+            "PEP BOYS",
+            "E-ZPASS",
+            "CITY PARKING AUTHORITY",
+        ],
+        amount_min=8.0,
+        amount_max=650.0,
+        cadence="weekly",
+        channels=["card", "ach"],
+        mcc_descriptions=[
+            "SERVICE STATIONS (WITH OR WITHOUT ANCILLARY SERVICES)",
+            "AUTOMOTIVE PARTS, ACCESSORIES STORES",
+            "AUTOMOBILE PARKING LOTS AND GARAGES",
+            "TOLLS, ROAD AND BRIDGE FEES",
+        ],
+        memo_templates=[
+            "Fuel purchase {month}",
+            "Vehicle maintenance service call {month}",
+            "Parking and tolls {month}",
+            "Auto parts replenishment {month}",
         ],
     ),
     CategoryTemplate(
@@ -352,4 +400,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

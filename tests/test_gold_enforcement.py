@@ -2,7 +2,12 @@ import sqlite3
 from pathlib import Path
 
 from sourcetax import categorization, storage
-from sourcetax.gold import filter_human_labeled_gold, is_human_labeled_gold_record
+from sourcetax.gold import (
+    filter_human_labeled_gold,
+    is_human_labeled_gold_record,
+    normalize_label_confidence,
+    normalize_label_notes,
+)
 
 
 def test_is_human_labeled_gold_record():
@@ -32,6 +37,13 @@ def test_filter_human_labeled_gold():
     filtered, skipped = filter_human_labeled_gold(rows)
     assert [r["id"] for r in filtered] == ["1"]
     assert skipped == 2
+
+
+def test_normalize_label_metadata_helpers():
+    assert normalize_label_confidence("HIGH") == "high"
+    assert normalize_label_confidence("unknown") == "medium"
+    assert normalize_label_notes(None) == ""
+    assert normalize_label_notes("  edge case ") == "edge case"
 
 
 def test_save_category_override_marks_human_label_source(tmp_path: Path):
@@ -71,7 +83,13 @@ def test_save_category_override_marks_human_label_source(tmp_path: Path):
     conn.commit()
     conn.close()
 
-    categorization.save_category_override("rec_human_1", "Travel", str(db_path))
+    categorization.save_category_override(
+        "rec_human_1",
+        "Travel",
+        str(db_path),
+        label_confidence="low",
+        label_notes="Ambiguous vendor string.",
+    )
 
     conn = sqlite3.connect(str(db_path))
     cur = conn.cursor()
@@ -81,4 +99,5 @@ def test_save_category_override_marks_human_label_source(tmp_path: Path):
     assert row is not None
     assert row[0] == "Travel"
     assert '"label_source": "human"' in (row[1] or "")
-
+    assert '"label_confidence": "low"' in (row[1] or "")
+    assert '"label_notes": "Ambiguous vendor string."' in (row[1] or "")

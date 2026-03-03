@@ -15,6 +15,8 @@ import csv
 from difflib import SequenceMatcher
 from sourcetax.schema import CanonicalRecord
 from sourcetax.gold import filter_human_labeled_gold
+from sourcetax import mapping
+from sourcetax.taxonomy import normalize_category_name
 
 
 @dataclass
@@ -30,27 +32,20 @@ class EvalMetrics:
     extraction_amount_accuracy: float
 
 
-# Keyword rules for categorization
-KEYWORD_RULES = {
-    "HOME DEPOT": ("Supplies", 0.6),
-    "LOWES": ("Supplies", 0.6),
-    "AMAZON": ("Supplies", 0.6),
-    "OFFICE DEPOT": ("Supplies", 0.65),
-    "STAPLES": ("Supplies", 0.65),
-    "UBER": ("Travel", 0.7),
-    "LYFT": ("Travel", 0.7),
-    "GAS": ("Travel", 0.6),
-    "CHEVRON": ("Travel", 0.6),
-    "STARBUCKS": ("Meals and Lodging", 0.6),
-    "CAFE": ("Meals and Lodging", 0.55),
-    "RESTAURANT": ("Meals and Lodging", 0.65),
-    "HOTEL": ("Travel", 0.75),
-    "AIRBNB": ("Travel", 0.75),
-    "UTILITY": ("Utilities", 0.8),
-    "INTERNET": ("Utilities", 0.75),
-    "INSURANCE": ("Insurance", 0.85),
-    "TAX": ("Taxes", 0.85),
-}
+def _safe_json_loads(value, default):
+    if value is None:
+        return default
+    if isinstance(value, (dict, list)):
+        return value
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return default
+        try:
+            return json.loads(text)
+        except Exception:
+            return default
+    return default
 
 
 def load_merchant_category_map(path: str = "data/mappings/merchant_category.csv") -> Dict[str, str]:
@@ -65,7 +60,7 @@ def load_merchant_category_map(path: str = "data/mappings/merchant_category.csv"
             reader = csv.DictReader(f)
             for row in reader:
                 merchant = row.get("merchant", "").strip().upper()
-                category = row.get("category_name", "").strip()
+                category = normalize_category_name(row.get("category_name", "").strip())
                 if merchant and category:
                     mapping[merchant] = category
     except Exception:
@@ -74,7 +69,16 @@ def load_merchant_category_map(path: str = "data/mappings/merchant_category.csv"
     return mapping
 
 
-def categorize_by_rules(merchant: Optional[str], merchant_map: Dict[str, str]) -> Tuple[Optional[str], float]:
+def categorize_by_rules(
+    merchant: Optional[str],
+    merchant_map: Dict[str, str],
+    *,
+    description: Optional[str] = None,
+    mcc: Optional[str] = None,
+    mcc_description: Optional[str] = None,
+    external_category: Optional[str] = None,
+    amount: Optional[float] = None,
+) -> Tuple[Optional[str], float]:
     """
     Categorize using rules (no database).
     Priority:
@@ -97,12 +101,33 @@ def categorize_by_rules(merchant: Optional[str], merchant_map: Dict[str, str]) -
         if merchant_norm in known or known in merchant_norm:
             return category, 0.75
     
-    # Keyword match
-    for keyword, (category, confidence) in KEYWORD_RULES.items():
-        if keyword in merchant_norm:
-            return category, confidence
-    
-    return None, 0.3
+    resolved, reasons = mapping.resolve_category_with_reason(
+        merchant_raw=merchant,
+        description=description,
+        mcc=mcc,
+        mcc_description=mcc_description,
+        external_category=external_category,
+        amount=amount,
+        fallback="Other Expense",
+    )
+    confidence = 0.3
+    if reasons:
+        first = reasons[0]
+        if first.startswith("financial_high:"):
+            confidence = 0.9
+        elif first.startswith("financial_medium:"):
+            confidence = 0.7
+        elif "_high:" in first:
+            confidence = 0.9
+        elif "_medium:" in first:
+            confidence = 0.7
+        elif first.startswith("keyword:"):
+            confidence = 0.9
+        elif first.startswith("mcc:") or first.startswith("mcc_description:"):
+            confidence = 0.85
+        elif first.startswith("external:"):
+            confidence = 0.7
+    return resolved, confidence
 
 
 def load_gold_set(gold_path: Path = None) -> List[Dict]:
@@ -137,10 +162,26 @@ def eval_category_accuracy(gold_records: List[Dict]) -> Tuple[float, Dict[str, f
     by_category = {}
     
     for gold in gold_records:
-        truth = gold.get("category_final")
+        truth = normalize_category_name(gold.get("sourcetax_category_v1") or gold.get("category_final"))
         merchant = gold.get("merchant_raw")
-        
-        predicted, _ = categorize_by_rules(merchant, merchant_map)
+        raw_payload = _safe_json_loads(gold.get("raw_payload"), {})
+        if not isinstance(raw_payload, dict):
+            raw_payload = {}
+        description = gold.get("description") or raw_payload.get("description") or raw_payload.get("ocr_text")
+        mcc = gold.get("mcc") or raw_payload.get("mcc")
+        mcc_description = gold.get("mcc_description") or raw_payload.get("mcc_description")
+        external_category = gold.get("category_external") or raw_payload.get("category_external")
+
+        predicted, _ = categorize_by_rules(
+            merchant,
+            merchant_map,
+            description=description,
+            mcc=mcc,
+            mcc_description=mcc_description,
+            external_category=external_category,
+            amount=gold.get("amount"),
+        )
+        predicted = normalize_category_name(predicted)
         
         if truth:
             if truth not in by_category:

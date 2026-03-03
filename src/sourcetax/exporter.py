@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from .taxonomy import load_merchant_map, normalize_category_name
 from .categorization import KEYWORD_RULES
-from .gold import is_human_labeled_gold_record
+from .gold import is_human_labeled_gold_record, normalize_label_confidence, normalize_label_notes
 
 
 PIPELINE_VERSION = "phase4"
@@ -677,6 +677,9 @@ def export_gold_transactions_jsonl(
                 "amount": row["amount"],
                 "category_pred": category_pred,
                 "category_final": category_final,
+                "sourcetax_category_v1": category_final,
+                "label_confidence": normalize_label_confidence(raw_payload.get("label_confidence"), default="medium"),
+                "label_notes": normalize_label_notes(raw_payload.get("label_notes")),
                 "matched_transaction_id": row["matched_transaction_id"],
                 "match_score": row["match_score"],
                 "raw_payload": raw_payload,

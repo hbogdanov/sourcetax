@@ -20,6 +20,7 @@ An AI-driven pipeline that ingests transaction data from banks, POS systems, and
 
 ## Recent Updates
 
+- Consolidated March 2026 implementation log: `docs/project_progress_2026-03.md`
 - Added `tools/phase3_benchmark.py` to generate `reports/phase3_eval.md` and evaluation artifacts
 - Added `tools/phase4_run.py` to generate accounting-grade exports and reconciliation queues in one command
 - Unified merchant normalization usage via `src/sourcetax/normalization.py`
@@ -44,6 +45,7 @@ An AI-driven pipeline that ingests transaction data from banks, POS systems, and
 - Enforced human-only gold usage for ML/evaluation/export paths (`src/sourcetax/gold.py`, `tools/eval.py`, `src/sourcetax/models/data_prep.py`)
 - Added synthetic gap-fill coverage reporting (`tools/gapfill_coverage_report.py`) for weak-category checks before gold sampling
 - Moved merchant aliases to data mapping file (`data/mappings/merchant_aliases.json`)
+- Added locked labeling contract doc (`docs/labeling_guidelines_v1.md`) and gold metadata fields (`sourcetax_category_v1`, `label_confidence`, `label_notes`)
 
 ## Quick Start
 
@@ -198,7 +200,7 @@ SourceTax now uses a single category contract at `data/taxonomy/sourcetax_v1.jso
 
 - UI category dropdown reads from taxonomy file (no hardcoded category list).
 - Validators reject category overrides not present in SourceTax v1.
-- Exports normalize aliases and only emit SourceTax v1 categories (fallback: `Uncategorized`).
+- Exports normalize aliases and only emit SourceTax v1 categories (fallback: `Other Expense`).
 - Mapping scaffolds are stored in:
   - `data/mappings/external_category_to_sourcetax_v1.json`
   - `data/mappings/mcc_to_sourcetax_v1.json`

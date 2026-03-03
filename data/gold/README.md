@@ -4,91 +4,50 @@ This directory contains hand-labeled transaction data for evaluating SourceTax c
 
 ## Files
 
-- `gold_transactions.jsonl` — Canonical transactions with ground truth labels
+- `gold_transactions.jsonl` - Canonical transactions with human labels
 
-## Format
+## Locked Labeling Contract
 
-Each line is a JSON object conforming to `CanonicalRecord` schema with these guaranteed fields:
+- Primary label field: `sourcetax_category_v1`
+- Backward-compatible copy: `category_final`
+- Confidence field: `label_confidence` (`high|medium|low`)
+- Notes field: `label_notes` (free text, empty string allowed)
+- Only SourceTax v1 taxonomy values are allowed for labels.
+
+## Row Format
 
 ```json
 {
   "id": "gold_001",
   "source": "bank|receipt|toast|quickbooks",
-  "source_record_id": "original_id",
   "transaction_date": "2024-01-15",
-  "merchant_raw": "ORIGINAL NAME",
-  "merchant_norm": "Normalized Name",
-  "amount": 49.99,
-  "currency": "USD",
+  "merchant_raw": "STARBUCKS COFFEE",
+  "merchant_norm": "Starbucks",
+  "amount": 6.45,
   "direction": "expense|income",
-  "payment_method": "debit_card|credit_card|...",
-  "category_pred": null,
-  "category_final": "Meals and Lodging",
-  "confidence": null,
+  "category_final": "Meals & Entertainment",
+  "sourcetax_category_v1": "Meals & Entertainment",
+  "label_confidence": "high",
+  "label_notes": "",
   "matched_transaction_id": "gold_003",
   "match_score": 0.87,
-  "evidence_keys": ["date_match", "amount_close"],
-  "raw_payload": {}
+  "raw_payload": {
+    "label_source": "human"
+  }
 }
 ```
 
 ## Ground Truth Fields
 
-These fields are gold standard (human-verified):
+- `sourcetax_category_v1` - Canonical SourceTax v1 label for training/eval/export.
+- `category_final` - Duplicate of the canonical label for backward compatibility.
+- `label_confidence` - Human confidence in the assigned label.
+- `label_notes` - Human notes for ambiguity/edge cases.
+- `matched_transaction_id` - Verified receipt-to-bank linkage when applicable.
+- `merchant_norm`, `amount`, `transaction_date`, `direction` - Human-verified values.
 
-- **`category_final`** — Correct Schedule C category (e.g., "Meals and Lodging", "Travel", "Office Supplies")
-- **`matched_transaction_id`** — If set, this receipt links to that bank transaction (or vice versa)
-- **`merchant_norm`** — Human-approved merchant normalization
-- **`amount`, `transaction_date`, `direction`** — Verified correct
+## Authoring Rules
 
-## Expanding the Gold Set
-
-Use `app_review.py` to interactively build the gold set:
-
-```bash
-streamlit run app_review.py
-```
-
-Workflow:
-1. Review unmatched receipts/transactions
-2. Approve or override matches
-3. Override category predictions where rules are wrong
-4. Save overrides to database
-5. From the Dashboard, click **Export reviewed labels to gold_transactions.jsonl**
-
-Notes:
-- The Dashboard shows progress toward a target of 200 gold labels.
-- Export writes reviewed rows (`category_final` set) to `data/gold/gold_transactions.jsonl`.
-- Export de-duplicates by record `id` when appending.
-
-You can also export programmatically:
-```python
-from sourcetax import exporter
-
-result = exporter.export_gold_transactions_jsonl(
-    db_path="data/store.db",
-    gold_path="data/gold/gold_transactions.jsonl",
-    append=True,
-)
-print(result)
-```
-
-## Evaluation
-
-Run evaluation:
-```bash
-python tools/eval.py
-```
-
-Outputs metrics:
-- Categorization accuracy (overall + by category)
-- Matching precision/recall/F1
-- Extraction accuracy (merchant, date, amount)
-
-## Contribution Guidelines
-
-When adding to gold set:
-- Ensure all `category_final` values are valid Schedule C categories
-- For matched receipts, verify the `matched_transaction_id` and `match_score` manually
-- Include diverse merchant types and edge cases
-- Annotate tricky cases in `raw_payload["notes"]`
+- If truly ambiguous: label `Other Expense` and explain in `label_notes`.
+- Do not write `Uncategorized` into gold.
+- Ensure `raw_payload.label_source == "human"` for gold rows.

@@ -72,7 +72,7 @@ def _normalize_source(value: str) -> str:
 def _category_counts(rows: Iterable[dict]) -> Counter:
     c = Counter()
     for row in rows:
-        raw = (row.get("category_final") or "").strip()
+        raw = (row.get("sourcetax_category_v1") or row.get("category_final") or "").strip()
         cat = CATEGORY_ALIASES.get(raw, raw)
         if cat:
             c[cat] += 1

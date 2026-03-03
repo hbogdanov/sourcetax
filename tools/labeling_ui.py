@@ -14,6 +14,10 @@ import pandas as pd
 import streamlit as st
 import json
 from datetime import datetime
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+from sourcetax import taxonomy
 
 
 def load_candidates(path: Path) -> pd.DataFrame:
@@ -27,13 +31,21 @@ def append_to_gold(df: pd.DataFrame, gold_path: Path):
     gold_path.parent.mkdir(parents=True, exist_ok=True)
     with gold_path.open("a", encoding="utf-8") as f:
         for _, row in df.iterrows():
+            category = taxonomy.normalize_category_name(row.get("category"))
+            if not category:
+                continue
             rec = {
                 "id": f"gold_{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}",
-                "merchant": row.get("merchant", ""),
-                "description": row.get("text", ""),
+                "merchant_raw": row.get("merchant", ""),
+                "merchant_norm": row.get("merchant", ""),
+                "transaction_date": row.get("transaction_date", ""),
                 "amount": row.get("amount", None),
-                "category": row.get("category", None),
+                "category_final": category,
+                "sourcetax_category_v1": category,
+                "label_confidence": "medium",
+                "label_notes": "",
                 "source": row.get("source", "unlabeled"),
+                "raw_payload": {"label_source": "human", "description": row.get("text", "")},
             }
             f.write(json.dumps(rec) + "\n")
 

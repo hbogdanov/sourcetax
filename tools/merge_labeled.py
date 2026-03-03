@@ -13,10 +13,18 @@ Behavior:
 import argparse
 import json
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+from sourcetax import taxonomy
+from sourcetax.gold import normalize_label_confidence, normalize_label_notes
 
 
 def fingerprint(rec: dict) -> str:
-    return f"{rec.get('merchant','')}	{rec.get('description','')}	{rec.get('amount','')}".lower()
+    merchant = rec.get("merchant_raw") or rec.get("merchant") or ""
+    description = (rec.get("raw_payload") or {}).get("description", "") if isinstance(rec.get("raw_payload"), dict) else rec.get("description", "")
+    amount = rec.get("amount", "")
+    return f"{merchant}\t{description}\t{amount}".lower()
 
 
 def load_gold(gold_path: Path) -> list:
@@ -65,13 +73,35 @@ def main():
     with in_path.open(newline='', encoding='utf-8') as fh:
         reader = csv.DictReader(fh)
         for r in reader:
+            category = taxonomy.normalize_category_name(r.get("sourcetax_category_v1") or r.get("category"))
+            if not category:
+                continue
             rec = {
                 "id": r.get("id") or None,
-                "merchant": r.get("merchant") or r.get("vendor") or r.get("Vendor") or "",
-                "description": r.get("description") or r.get("text") or "",
+                "source_record_id": r.get("source_record_id") or "",
+                "merchant_raw": r.get("merchant_raw") or r.get("merchant") or r.get("vendor") or r.get("Vendor") or "",
+                "merchant_norm": r.get("merchant_norm") or r.get("merchant") or r.get("vendor") or r.get("Vendor") or "",
+                "transaction_date": r.get("transaction_date") or "",
                 "amount": r.get("amount") or r.get("Amount") or None,
-                "category": r.get("category") or None,
+                "currency": r.get("currency") or "USD",
+                "mcc": r.get("mcc") or "",
+                "mcc_description": r.get("mcc_description") or "",
+                "category_external": r.get("category_external") or "",
+                "category_final": category,
+                "sourcetax_category_v1": category,
+                "label_confidence": normalize_label_confidence(r.get("label_confidence")),
+                "label_notes": normalize_label_notes(r.get("label_notes")),
                 "source": r.get("source") or "labeled",
+                "raw_payload": {
+                    "description": r.get("description") or r.get("text") or "",
+                    "label_source": "human",
+                    "mapping_reason": r.get("mapping_reason") or "",
+                    "rule_category_suggested": r.get("rule_category_suggested") or "",
+                    "rule_confidence": r.get("rule_confidence") or "",
+                    "mcc": r.get("mcc") or "",
+                    "mcc_description": r.get("mcc_description") or "",
+                    "category_external": r.get("category_external") or "",
+                },
             }
             fp = fingerprint(rec)
             if fp in seen:

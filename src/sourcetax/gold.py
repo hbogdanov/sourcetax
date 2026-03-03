@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, Iterable, List, Tuple
 
+ALLOWED_LABEL_CONFIDENCE = {"high", "medium", "low"}
+
 
 def _safe_json_loads(value: Any, default: Any) -> Any:
     if value is None:
@@ -39,8 +41,29 @@ def get_label_source(record: Dict[str, Any]) -> str:
     return source
 
 
+def get_gold_category(record: Dict[str, Any]) -> str:
+    return str(
+        record.get("sourcetax_category_v1")
+        or record.get("category_final")
+        or ""
+    ).strip()
+
+
+def normalize_label_confidence(value: Any, default: str = "medium") -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized in ALLOWED_LABEL_CONFIDENCE:
+        return normalized
+    return default
+
+
+def normalize_label_notes(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
 def is_human_labeled_gold_record(record: Dict[str, Any]) -> bool:
-    category = str(record.get("category_final") or "").strip()
+    category = get_gold_category(record)
     if not category:
         return False
     return get_label_source(record) == "human"
@@ -55,4 +78,3 @@ def filter_human_labeled_gold(records: Iterable[Dict[str, Any]]) -> Tuple[List[D
         else:
             skipped += 1
     return out, skipped
-

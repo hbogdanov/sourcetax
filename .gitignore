@@ -23,6 +23,7 @@ data/combined_dataset/
 outputs/
 reports/
 tmp/
+artifacts/
 
 # Large dataset artifacts (generated, not source)
 *.parquet
@@ -33,3 +34,6 @@ tmp/
 
 # Local planning/docs PDFs (not project source artifacts)
 SourceTax dataset landscape for small*business transaction categorization.pdf
+
+# Local labeled draft drops (pre-merge)
+label_batch_*_labeled_draft.csv

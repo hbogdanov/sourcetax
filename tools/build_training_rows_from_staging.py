@@ -49,6 +49,7 @@ def _row_to_training_row(row: sqlite3.Row) -> Dict[str, Any]:
         mcc=row["mcc"],
         mcc_description=row["mcc_description"],
         external_category=row["category_external"],
+        amount=row["amount"],
         fallback="Other Expense",
     )
     raw_payload = _safe_json_loads(row["raw_payload_json"], {})
