@@ -205,6 +205,20 @@ SourceTax now uses a single category contract at `data/taxonomy/sourcetax_v1.jso
   - `data/mappings/external_category_to_sourcetax_v1.json`
   - `data/mappings/mcc_to_sourcetax_v1.json`
 
+## Data Hygiene (What Belongs In Git)
+
+Keep in repo:
+- `data/gold/` (small, curated, versioned)
+- `data/taxonomy/` and `data/mappings/`
+- `data/samples/` (tiny demo inputs only)
+
+Do not keep in repo:
+- generated combined datasets
+- generated manifests
+- fetched corpora / large OCR datasets
+
+These are treated as build artifacts and should be regenerated/fetched on demand.
+
 ## Staging Importers (Data Pipeline)
 
 Staging DB path: `data/staging.db` (tables: `staging_transactions`, `staging_receipts`)
