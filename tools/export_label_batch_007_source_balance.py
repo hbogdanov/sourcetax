@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Export source-diversity labeling queues (bank and toast) with rare-category oversampling."""
 
 from __future__ import annotations
@@ -127,13 +127,13 @@ def _to_row(r: Dict, bucket: str) -> Dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--staging-db", default="data/staging.db")
+    parser.add_argument("--staging-db", default="data/interim/staging.db")
     parser.add_argument("--table", default="staging_transactions_enriched")
     parser.add_argument("--gold-path", default="data/gold/gold_transactions.jsonl")
     parser.add_argument("--bank-target", type=int, default=150)
     parser.add_argument("--toast-target", type=int, default=150)
-    parser.add_argument("--out", default="outputs/label_batch_007_source_balance.csv")
-    parser.add_argument("--summary-out", default="outputs/reports/label_batch_007_source_balance_summary.json")
+    parser.add_argument("--out", default="artifacts/labeling/label_batch_007_source_balance.csv")
+    parser.add_argument("--summary-out", default="artifacts/reports/label_batch_007_source_balance_summary.json")
     args = parser.parse_args()
 
     db = Path(args.staging_db)
@@ -205,4 +205,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
 

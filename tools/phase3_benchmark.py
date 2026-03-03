@@ -3,8 +3,8 @@
 Phase 3 benchmark runner: rules vs TF-IDF vs ensemble (and optional SBERT).
 
 Outputs:
-- reports/phase3_eval.md
-- reports/phase3_eval_assets/* (CSV + HTML charts)
+- artifacts/reports/phase3_eval.md
+- artifacts/reports/phase3_eval_assets/* (CSV + HTML charts)
 
 This script is designed to run on a fresh machine with core deps only.
 SBERT is optional and skipped if sentence-transformers is unavailable.
@@ -273,8 +273,8 @@ def export_needs_review_csv(
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--data-dir", default="data/ml")
-    parser.add_argument("--report", default="reports/phase3_eval.md")
-    parser.add_argument("--assets-dir", default="reports/phase3_eval_assets")
+    parser.add_argument("--report", default="artifacts/reports/phase3_eval.md")
+    parser.add_argument("--assets-dir", default="artifacts/reports/phase3_eval_assets")
     parser.add_argument("--rules-threshold", type=float, default=0.80)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--allow-small", action="store_true", help="Allow n<30 without failing")

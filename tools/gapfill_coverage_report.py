@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Report synthetic gap-fill category coverage from staging_transactions."""
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ def _fetch_counts(conn: sqlite3.Connection) -> List[Tuple[str, int]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--staging-db", default="data/staging.db")
+    parser.add_argument("--staging-db", default="data/interim/staging.db")
     parser.add_argument("--target-per-category", type=int, default=200)
     args = parser.parse_args()
 
@@ -73,4 +73,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

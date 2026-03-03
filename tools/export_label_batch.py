@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Export a balanced gold-label candidate batch from enriched staging rows."""
 
 from __future__ import annotations
@@ -201,9 +201,9 @@ def _append_backfill(
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--staging-db", default="data/staging.db")
+    parser.add_argument("--staging-db", default="data/interim/staging.db")
     parser.add_argument("--table", default="staging_transactions_enriched")
-    parser.add_argument("--out", default="outputs/label_batch_001.csv")
+    parser.add_argument("--out", default="artifacts/labeling/label_batch_001.csv")
     parser.add_argument("--total", type=int, default=200)
     parser.add_argument("--batch-a", type=int, default=60)
     parser.add_argument("--batch-b", type=int, default=80)
@@ -299,3 +299,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+

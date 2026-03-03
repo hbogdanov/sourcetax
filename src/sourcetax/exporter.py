@@ -1,4 +1,4 @@
-import sqlite3
+﻿import sqlite3
 from pathlib import Path
 import csv
 import json
@@ -85,7 +85,7 @@ def _to_record_dict(row: sqlite3.Row) -> Dict[str, Any]:
     return d
 
 
-def fetch_records_full(db_path: str = "data/store.db") -> List[Dict[str, Any]]:
+def fetch_records_full(db_path: str = "data/interim/store.db") -> List[Dict[str, Any]]:
     """Fetch canonical records with all known fields for Phase 4 exports."""
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -106,7 +106,7 @@ def fetch_records_full(db_path: str = "data/store.db") -> List[Dict[str, Any]]:
     return rows
 
 
-def fetch_all_records(db_path: str = "data/store.db"):
+def fetch_all_records(db_path: str = "data/interim/store.db"):
     """Fetch all canonical records, including Phase 2 fields for categorization."""
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -137,8 +137,8 @@ def fetch_all_records(db_path: str = "data/store.db"):
 
 
 def export_transactions_enriched_csv(
-    db_path: str = "data/store.db",
-    out_path: str = "outputs/accounting_transactions_enriched.csv",
+    db_path: str = "data/interim/store.db",
+    out_path: str = "artifacts/exports/accounting_transactions_enriched.csv",
     pipeline_version: str = PIPELINE_VERSION,
     run_id: Optional[str] = None,
 ) -> str:
@@ -215,8 +215,8 @@ def _schedule_c_account_name(category: str, direction: str) -> str:
 
 
 def export_gl_lines_csv(
-    db_path: str = "data/store.db",
-    out_path: str = "outputs/gl_lines.csv",
+    db_path: str = "data/interim/store.db",
+    out_path: str = "artifacts/exports/gl_lines.csv",
     pipeline_version: str = PIPELINE_VERSION,
     run_id: Optional[str] = None,
 ) -> str:
@@ -302,8 +302,8 @@ def export_gl_lines_csv(
 
 
 def export_audit_trail_jsonl(
-    db_path: str = "data/store.db",
-    out_path: str = "outputs/audit_trail.jsonl",
+    db_path: str = "data/interim/store.db",
+    out_path: str = "artifacts/exports/audit_trail.jsonl",
     pipeline_version: str = PIPELINE_VERSION,
     run_id: Optional[str] = None,
 ) -> str:
@@ -382,7 +382,7 @@ def export_audit_trail_jsonl(
 
 
 def export_accounting_grade_bundle(
-    db_path: str = "data/store.db",
+    db_path: str = "data/interim/store.db",
     out_dir: str = "outputs",
     pipeline_version: str = PIPELINE_VERSION,
     run_id: Optional[str] = None,
@@ -415,7 +415,7 @@ def export_accounting_grade_bundle(
 
 
 def generate_quickbooks_csv(
-    out_path: str = "outputs/quickbooks_import.csv", db_path: str = "data/store.db"
+    out_path: str = "artifacts/exports/quickbooks_import.csv", db_path: str = "data/interim/store.db"
 ):
     """Generate QuickBooks import CSV using category_final (user override) if present."""
     outp = Path(out_path)
@@ -437,7 +437,7 @@ def generate_quickbooks_csv(
     return str(outp)
 
 
-def compute_schedule_c_totals(db_path: str = "data/store.db"):
+def compute_schedule_c_totals(db_path: str = "data/interim/store.db"):
     """Compute Schedule C totals using category_final (user override) if present."""
     totals = {}
     count_by_category = {}
@@ -461,7 +461,7 @@ def compute_schedule_c_totals(db_path: str = "data/store.db"):
 
 
 def write_schedule_c_csv(
-    totals: dict, count_by_category: dict = None, out_path: str = "outputs/schedule_c_totals.csv"
+    totals: dict, count_by_category: dict = None, out_path: str = "artifacts/exports/schedule_c_totals.csv"
 ):
     """Write Schedule C totals with optional transaction counts."""
     outp = Path(out_path)
@@ -479,7 +479,7 @@ def write_schedule_c_csv(
     return str(outp)
 
 
-def export_audit_pack(db_path: str = "data/store.db", out_path: str = "outputs/audit_pack.csv"):
+def export_audit_pack(db_path: str = "data/interim/store.db", out_path: str = "artifacts/exports/audit_pack.csv"):
     """
     Export audit pack: all transactions with category, match status, confidence.
     
@@ -530,7 +530,7 @@ def export_audit_pack(db_path: str = "data/store.db", out_path: str = "outputs/a
     return str(outp)
 
 
-def export_metrics(db_path: str = "data/store.db") -> dict:
+def export_metrics(db_path: str = "data/interim/store.db") -> dict:
     """Calculate and return audit metrics."""
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -591,7 +591,7 @@ def count_gold_records(gold_path: str = "data/gold/gold_transactions.jsonl") -> 
 
 
 def export_gold_transactions_jsonl(
-    db_path: str = "data/store.db",
+    db_path: str = "data/interim/store.db",
     gold_path: str = "data/gold/gold_transactions.jsonl",
     append: bool = True,
 ) -> dict:
@@ -694,3 +694,4 @@ def export_gold_transactions_jsonl(
         "skipped_non_human": skipped_non_human,
         "total_after": count_gold_records(str(outp)),
     }
+

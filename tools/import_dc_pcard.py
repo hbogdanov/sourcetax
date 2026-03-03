@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Import DC purchase card ArcGIS feed into staging_transactions.
 
 Target mapping:
@@ -103,7 +103,7 @@ def _feature_to_staging(attrs: Dict[str, Any], idx: int) -> Dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--staging-db", default="data/staging.db")
+    parser.add_argument("--staging-db", default="data/interim/staging.db")
     parser.add_argument("--query-url", default=DEFAULT_QUERY_URL)
     parser.add_argument("--batch-size", type=int, default=1000)
     parser.add_argument("--page-size", type=int, default=1000)
@@ -180,4 +180,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

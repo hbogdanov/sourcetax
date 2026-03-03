@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Detailed categorization error breakdown on the gold set."""
 
 from __future__ import annotations
@@ -72,7 +72,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--gold", default="data/gold/gold_transactions.jsonl")
     parser.add_argument("--top-wrong", type=int, default=50)
-    parser.add_argument("--out-dir", default="outputs/reports")
+    parser.add_argument("--out-dir", default="artifacts/reports")
     args = parser.parse_args()
 
     gold = _load_gold(Path(args.gold))
@@ -178,3 +178,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

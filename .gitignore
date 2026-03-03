@@ -15,6 +15,9 @@ venv/
 .DS_Store
 
 # Data + outputs
+data/interim/
+data/raw/
+data/external/
 data/store.db
 data/staging.db
 data/forms/

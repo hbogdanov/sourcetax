@@ -1,4 +1,4 @@
-"""
+﻿"""
 Phase 2.3: Rules-based categorization + learned overrides.
 
 Start with rules, no ML. Learn from user overrides.
@@ -18,7 +18,7 @@ from . import mapping
 from . import shadow_ml
 
 
-# Keyword rules: merchant substring → (category, confidence)
+# Keyword rules: merchant substring â†’ (category, confidence)
 KEYWORD_RULES = {
     "HOME DEPOT": ("Office Supplies", 0.6),
     "LOWES": ("Office Supplies", 0.6),
@@ -56,10 +56,10 @@ PROD_ML_CONF_THRESHOLD = 0.30
 
 
 def load_merchant_category_map(path: str = "data/mappings/merchant_category.csv") -> Dict[str, str]:
-    """Load exact merchant → category mapping from CSV.
+    """Load exact merchant â†’ category mapping from CSV.
     
     CSV columns: merchant, category_code, category_name, notes
-    Returns dict mapping merchant (uppercase) → category_name
+    Returns dict mapping merchant (uppercase) â†’ category_name
     """
     mapping = {}
     p = Path(path)
@@ -124,7 +124,7 @@ def categorize_by_keywords(merchant: str) -> Optional[Tuple[str, float]]:
     return None
 
 
-def get_learned_override(merchant: str, db_path: str = "data/store.db") -> Optional[Tuple[str, float]]:
+def get_learned_override(merchant: str, db_path: str = "data/interim/store.db") -> Optional[Tuple[str, float]]:
     """Check if user has overridden category for this merchant (highest priority)."""
     if not merchant:
         return None
@@ -159,7 +159,7 @@ def get_learned_override(merchant: str, db_path: str = "data/store.db") -> Optio
     return None
 
 
-def categorize_record(record_id: str, db_path: str = "data/store.db") -> Tuple[Optional[str], float]:
+def categorize_record(record_id: str, db_path: str = "data/interim/store.db") -> Tuple[Optional[str], float]:
     """
     Auto-categorize a record using rules priority:
     1. Learned override (user has set this merchant before)
@@ -390,7 +390,7 @@ def build_shadow_decisions(
     }
 
 
-def categorize_record_shadow(record_id: str, db_path: str = "data/store.db") -> Optional[dict]:
+def categorize_record_shadow(record_id: str, db_path: str = "data/interim/store.db") -> Optional[dict]:
     """Compute rule/ml/hybrid outputs and return shadow logging payload.
 
     Production final remains rules-only for now.
@@ -427,7 +427,7 @@ def categorize_record_shadow(record_id: str, db_path: str = "data/store.db") -> 
 
 def log_shadow_inference(
     record_id: str,
-    db_path: str = "data/store.db",
+    db_path: str = "data/interim/store.db",
     *,
     overwrite_category_pred: bool = False,
 ) -> bool:
@@ -492,7 +492,7 @@ def log_shadow_inference(
     return True
 
 
-def categorize_all_records(db_path: str = "data/store.db") -> int:
+def categorize_all_records(db_path: str = "data/interim/store.db") -> int:
     """
     Auto-categorize all records without a category_pred.
     Updates category_pred field.
@@ -524,7 +524,7 @@ def categorize_all_records(db_path: str = "data/store.db") -> int:
 def save_category_override(
     record_id: str,
     category: str,
-    db_path: str = "data/store.db",
+    db_path: str = "data/interim/store.db",
     label_confidence: str = "medium",
     label_notes: str = "",
 ):
@@ -555,3 +555,4 @@ def save_category_override(
 
     conn.commit()
     conn.close()
+

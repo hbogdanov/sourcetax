@@ -12,6 +12,7 @@ Behavior:
 """
 import argparse
 import json
+import hashlib
 from pathlib import Path
 import sys
 
@@ -20,11 +21,64 @@ from sourcetax import taxonomy
 from sourcetax.gold import normalize_label_confidence, normalize_label_notes
 
 
+def _to_float(value):
+    try:
+        if value is None:
+            return None
+        s = str(value).strip()
+        if not s:
+            return None
+        return float(s)
+    except Exception:
+        return None
+
+
+def _infer_direction(direction_value, amount_value, category_value):
+    d = str(direction_value or "").strip().lower()
+    if d in {"expense", "income"}:
+        return d
+    amt = _to_float(amount_value)
+    if amt is not None:
+        if amt < 0:
+            return "expense"
+        if amt > 0:
+            return "income"
+    c = str(category_value or "").strip().lower()
+    if c == "income":
+        return "income"
+    return "expense"
+
+
+def _stable_source_record_id(rec: dict) -> str:
+    source = str(rec.get("source") or "").strip().lower()
+    merchant = str(rec.get("merchant_raw") or "").strip().lower()
+    date = str(rec.get("transaction_date") or "").strip()
+    amount = _to_float(rec.get("amount"))
+    amount_txt = "" if amount is None else f"{abs(amount):.2f}"
+    direction = str(rec.get("direction") or "").strip().lower()
+    base = f"{source}|{merchant}|{date}|{amount_txt}|{direction}"
+    digest = hashlib.sha1(base.encode("utf-8")).hexdigest()[:16]
+    return f"hash_{digest}"
+
+
+def canonicalize_gold_record(rec: dict) -> dict:
+    out = dict(rec)
+    out["currency"] = str(out.get("currency") or "USD").strip() or "USD"
+    out["direction"] = _infer_direction(out.get("direction"), out.get("amount"), out.get("sourcetax_category_v1") or out.get("category_final"))
+    amt = _to_float(out.get("amount"))
+    out["amount"] = abs(amt) if amt is not None else None
+    if not str(out.get("source_record_id") or "").strip():
+        out["source_record_id"] = _stable_source_record_id(out)
+    return out
+
+
 def fingerprint(rec: dict) -> str:
+    rec = canonicalize_gold_record(rec)
     merchant = rec.get("merchant_raw") or rec.get("merchant") or ""
     description = (rec.get("raw_payload") or {}).get("description", "") if isinstance(rec.get("raw_payload"), dict) else rec.get("description", "")
     amount = rec.get("amount", "")
-    return f"{merchant}\t{description}\t{amount}".lower()
+    direction = rec.get("direction", "")
+    return f"{merchant}\t{description}\t{amount}\t{direction}".lower()
 
 
 def load_gold(gold_path: Path) -> list:
@@ -84,6 +138,7 @@ def main():
                 "transaction_date": r.get("transaction_date") or "",
                 "amount": r.get("amount") or r.get("Amount") or None,
                 "currency": r.get("currency") or "USD",
+                "direction": r.get("direction") or "",
                 "mcc": r.get("mcc") or "",
                 "mcc_description": r.get("mcc_description") or "",
                 "category_external": r.get("category_external") or "",
@@ -103,6 +158,7 @@ def main():
                     "category_external": r.get("category_external") or "",
                 },
             }
+            rec = canonicalize_gold_record(rec)
             fp = fingerprint(rec)
             if fp in seen:
                 continue

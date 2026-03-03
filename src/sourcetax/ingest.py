@@ -1,4 +1,4 @@
-import csv
+﻿import csv
 from typing import Dict, Iterable
 from pathlib import Path
 from .schema import CanonicalRecord
@@ -120,7 +120,7 @@ def read_csv(path: str, source: str) -> Iterable[CanonicalRecord]:
             yield CanonicalRecord.from_normalized(norm)
 
 
-def ingest_and_store(path: str, source: str, db_path: str = "data/store.db") -> int:
+def ingest_and_store(path: str, source: str, db_path: str = "data/interim/store.db") -> int:
     storage.DB_PATH = Path(db_path)
     count = 0
     for rec in read_csv(path, source):
@@ -131,7 +131,7 @@ def ingest_and_store(path: str, source: str, db_path: str = "data/store.db") -> 
 
 def ingest_receipt_file(
     receipt_path: str | Path,
-    db_path: str = "data/store.db",
+    db_path: str = "data/interim/store.db",
     ocr_method: str = "tesseract",
 ) -> bool:
     """
@@ -178,3 +178,4 @@ if __name__ == "__main__":
     print("ingested toast records:", n)
     n = ingest_and_store("data/samples/bank_sample.csv", "bank")
     print("ingested bank records:", n)
+

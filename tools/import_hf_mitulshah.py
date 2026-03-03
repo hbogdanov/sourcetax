@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Import Hugging Face Mitul Shah transaction corpus into staging_transactions.
 
 Target mapping:
@@ -44,7 +44,7 @@ def _to_staging_row(example: Dict[str, Any], idx: int) -> Dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--staging-db", default="data/staging.db")
+    parser.add_argument("--staging-db", default="data/interim/staging.db")
     parser.add_argument("--split", default="train")
     parser.add_argument("--max-rows", type=int, default=100000)
     parser.add_argument("--batch-size", type=int, default=1000)
@@ -109,4 +109,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

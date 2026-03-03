@@ -1,4 +1,4 @@
-"""Phase 4 reconciliation queues and summary metrics."""
+﻿"""Phase 4 reconciliation queues and summary metrics."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from .categorization import categorize_by_keywords, load_merchant_category_map
 
 
-def _rows(query: str, params: tuple = (), db_path: str = "data/store.db") -> List[Dict[str, Any]]:
+def _rows(query: str, params: tuple = (), db_path: str = "data/interim/store.db") -> List[Dict[str, Any]]:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
@@ -20,7 +20,7 @@ def _rows(query: str, params: tuple = (), db_path: str = "data/store.db") -> Lis
     return out
 
 
-def unmatched_receipts(db_path: str = "data/store.db") -> List[Dict[str, Any]]:
+def unmatched_receipts(db_path: str = "data/interim/store.db") -> List[Dict[str, Any]]:
     return _rows(
         """
         SELECT id, transaction_date, merchant_raw, merchant_norm, amount, confidence,
@@ -33,7 +33,7 @@ def unmatched_receipts(db_path: str = "data/store.db") -> List[Dict[str, Any]]:
     )
 
 
-def unmatched_bank_transactions(db_path: str = "data/store.db") -> List[Dict[str, Any]]:
+def unmatched_bank_transactions(db_path: str = "data/interim/store.db") -> List[Dict[str, Any]]:
     return _rows(
         """
         SELECT id, transaction_date, merchant_raw, merchant_norm, amount, confidence, source
@@ -51,7 +51,7 @@ def unmatched_bank_transactions(db_path: str = "data/store.db") -> List[Dict[str
 
 
 def low_confidence_categorizations(
-    db_path: str = "data/store.db",
+    db_path: str = "data/interim/store.db",
     threshold: float = 0.7,
 ) -> List[Dict[str, Any]]:
     return _rows(
@@ -69,7 +69,7 @@ def low_confidence_categorizations(
     )
 
 
-def conflicts_queue(db_path: str = "data/store.db") -> List[Dict[str, Any]]:
+def conflicts_queue(db_path: str = "data/interim/store.db") -> List[Dict[str, Any]]:
     """Rules-vs-ML disagreement queue.
 
     Uses raw_payload hints when present:
@@ -132,7 +132,7 @@ def conflicts_queue(db_path: str = "data/store.db") -> List[Dict[str, Any]]:
     return conflicts
 
 
-def summary_metrics(db_path: str = "data/store.db", low_conf_threshold: float = 0.7) -> Dict[str, Any]:
+def summary_metrics(db_path: str = "data/interim/store.db", low_conf_threshold: float = 0.7) -> Dict[str, Any]:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
@@ -193,8 +193,8 @@ def summary_metrics(db_path: str = "data/store.db", low_conf_threshold: float = 
 
 
 def export_reconciliation_reports(
-    db_path: str = "data/store.db",
-    out_dir: str = "outputs/reconciliation",
+    db_path: str = "data/interim/store.db",
+    out_dir: str = "artifacts/reconciliation",
     low_conf_threshold: float = 0.7,
 ) -> Dict[str, str]:
     """Write reconciliation queues and summary metrics to CSV/JSON files."""
@@ -229,3 +229,4 @@ def export_reconciliation_reports(
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     outputs["summary_metrics"] = str(summary_path)
     return outputs
+

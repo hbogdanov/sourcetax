@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Generate synthetic gap-fill transactions for underrepresented business categories.
 
 Focus categories:
@@ -352,7 +352,7 @@ def build_gapfill_rows(
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--staging-db", default="data/staging.db")
+    parser.add_argument("--staging-db", default="data/interim/staging.db")
     parser.add_argument("--rows", type=int, default=1000)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--run-id", default="gapfill_v1")
@@ -400,3 +400,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

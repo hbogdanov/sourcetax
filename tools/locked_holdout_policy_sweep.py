@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Sweep hybrid gating policies on locked-holdout row-level predictions."""
 
 from __future__ import annotations
@@ -79,10 +79,10 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--row-level-csv",
-        default="outputs/reports/holdout_locked_post_batch456/locked_holdout_row_level.csv",
+        default="artifacts/reports/holdout_locked_post_batch456/locked_holdout_row_level.csv",
     )
-    parser.add_argument("--out-json", default="outputs/reports/holdout_locked_post_batch456/policy_sweep_summary.json")
-    parser.add_argument("--out-csv", default="outputs/reports/holdout_locked_post_batch456/policy_sweep_results.csv")
+    parser.add_argument("--out-json", default="artifacts/reports/holdout_locked_post_batch456/policy_sweep_summary.json")
+    parser.add_argument("--out-csv", default="artifacts/reports/holdout_locked_post_batch456/policy_sweep_results.csv")
     args = parser.parse_args()
 
     p = Path(args.row_level_csv)
@@ -181,4 +181,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

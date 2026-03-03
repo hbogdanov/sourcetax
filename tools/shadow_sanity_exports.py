@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Export high-signal shadow sanity artifacts from staging shadow logs."""
 
 from __future__ import annotations
@@ -46,10 +46,10 @@ def _fetch_rows(conn: sqlite3.Connection) -> List[sqlite3.Row]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", default="data/staging.db")
+    parser.add_argument("--db", default="data/interim/staging.db")
     parser.add_argument("--sample-size", type=int, default=200)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--out-dir", default="outputs/reports")
+    parser.add_argument("--out-dir", default="artifacts/reports")
     args = parser.parse_args()
 
     db = Path(args.db)
@@ -158,4 +158,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

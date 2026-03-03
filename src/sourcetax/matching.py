@@ -1,5 +1,5 @@
-"""
-Receipt ↔ Bank transaction matching.
+﻿"""
+Receipt â†” Bank transaction matching.
 
 Phase 2.2: Auto-link receipts to bank transactions with confidence scores.
 """
@@ -96,7 +96,7 @@ def match_receipt_to_bank(
         if d_score == 0:
             continue  # Different dates, skip
         
-        # Amount score (allow ±$10 for tax/tip tolerance)
+        # Amount score (allow Â±$10 for tax/tip tolerance)
         a_score = amount_closeness_score(receipt_amount, bank_amount, tolerance=10.0)
         if a_score == 0:
             continue  # Amounts too different, skip
@@ -117,7 +117,7 @@ def match_receipt_to_bank(
     return None, best_score
 
 
-def match_all_receipts(db_path: str = "data/store.db") -> int:
+def match_all_receipts(db_path: str = "data/interim/store.db") -> int:
     """
     Match all receipt records to bank transactions.
     Updates canonical_records with matched_transaction_id + match_score.
@@ -163,7 +163,7 @@ def match_all_receipts(db_path: str = "data/store.db") -> int:
     return matched_count
 
 
-def list_unmatched_receipts(db_path: str = "data/store.db") -> List[Dict]:
+def list_unmatched_receipts(db_path: str = "data/interim/store.db") -> List[Dict]:
     """Fetch all receipts without a matched transaction."""
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -181,7 +181,7 @@ def list_unmatched_receipts(db_path: str = "data/store.db") -> List[Dict]:
     return results
 
 
-def list_unmatched_transactions(db_path: str = "data/store.db") -> List[Dict]:
+def list_unmatched_transactions(db_path: str = "data/interim/store.db") -> List[Dict]:
     """Fetch all bank transactions without matched receipts."""
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -201,3 +201,4 @@ def list_unmatched_transactions(db_path: str = "data/store.db") -> List[Dict]:
     results = [dict(row) for row in cur.fetchall()]
     conn.close()
     return results
+

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Phase 4 runner: accounting-grade exports + reconciliation reports (+ optional adapters)."""
 
 from __future__ import annotations
@@ -21,8 +21,8 @@ def _read_csv_rows(path: str):
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", default="data/store.db")
-    parser.add_argument("--out-dir", default="outputs")
+    parser.add_argument("--db", default="data/interim/store.db")
+    parser.add_argument("--out-dir", default="artifacts/exports")
     parser.add_argument("--low-conf-threshold", type=float, default=0.7)
     parser.add_argument("--mock-qbo", action="store_true")
     args = parser.parse_args()
@@ -61,3 +61,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Build enriched staging transactions with normalization + deterministic mapping.
 
 Outputs:
 - SQLite table (default: staging_transactions_enriched) in the staging DB
-- CSV export (default: outputs/staging_transactions_enriched.csv)
+- CSV export (default: artifacts/exports/staging_transactions_enriched.csv)
 """
 
 from __future__ import annotations
@@ -107,9 +107,9 @@ def _row_to_enriched(row: sqlite3.Row) -> Dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--staging-db", default="data/staging.db")
+    parser.add_argument("--staging-db", default="data/interim/staging.db")
     parser.add_argument("--table", default="staging_transactions_enriched")
-    parser.add_argument("--out-csv", default="outputs/staging_transactions_enriched.csv")
+    parser.add_argument("--out-csv", default="artifacts/exports/staging_transactions_enriched.csv")
     args = parser.parse_args()
 
     db_path = Path(args.staging_db)
@@ -196,3 +196,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

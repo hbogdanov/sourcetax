@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Backfill shadow-mode inference fields at scale.
 
 Supports:
-- canonical_records (data/store.db-style)
-- staging_transactions (data/staging.db-style)
+- canonical_records (data/interim/store.db-style)
+- staging_transactions (data/interim/staging.db-style)
 
 Writes rule/ml/hybrid shadow fields into payload JSON and keeps production
 final category unchanged (rules) unless explicitly asked otherwise.
@@ -198,7 +198,7 @@ def _backfill_staging(conn: sqlite3.Connection) -> Tuple[int, int]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", default="data/staging.db")
+    parser.add_argument("--db", default="data/interim/staging.db")
     parser.add_argument(
         "--table",
         default="staging_transactions",
@@ -235,4 +235,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

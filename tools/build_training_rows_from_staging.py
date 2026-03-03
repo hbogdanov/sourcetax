@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Build mapped training rows from staging transactions with explainability.
 
 Each emitted row includes:
@@ -78,7 +78,7 @@ def _row_to_training_row(row: sqlite3.Row) -> Dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--staging-db", default="data/staging.db")
+    parser.add_argument("--staging-db", default="data/interim/staging.db")
     parser.add_argument("--out", default="data/ml/staging_training_rows.jsonl")
     parser.add_argument("--limit", type=int, default=0, help="0 means no limit")
     parser.add_argument(
@@ -128,3 +128,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

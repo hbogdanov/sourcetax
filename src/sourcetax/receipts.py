@@ -109,23 +109,39 @@ def extract_date(text: str) -> Optional[str]:
     return None
 
 
+_MONEY_RE = re.compile(r"(?<!\d)(-?\$?\s*\d[\d,]*[.,]\d{2})(?!\d)")
+
+
+def _extract_money_value(line: str) -> Optional[float]:
+    if not line:
+        return None
+    matches = _MONEY_RE.findall(line)
+    if not matches:
+        return None
+    token = str(matches[-1]).replace("$", "").replace(",", "").strip()
+    try:
+        return float(token)
+    except ValueError:
+        return None
+
+
 def extract_total(text: str) -> Optional[float]:
     """Extract total/amount from receipt (looks for TOTAL, AMOUNT, BALANCE, GRAND TOTAL)."""
     if not text:
         return None
     
     lines = text.split('\n')
-    for line in lines:
+    for idx, line in enumerate(lines):
         # Look for TOTAL, AMOUNT, BALANCE, GRAND TOTAL (case-insensitive)
         if re.search(r'\b(TOTAL|AMOUNT|BALANCE|GRAND\s+TOTAL)\b', line, re.IGNORECASE):
-            # Extract number from this line or next
-            match = re.search(r'\$WARNING:\s*(\d+[.,]\d{2})', line)
-            if match:
-                amount_str = match.group(1).replace(',', '')
-                try:
-                    return float(amount_str)
-                except ValueError:
-                    continue
+            # Extract number from this line or next line.
+            amount = _extract_money_value(line)
+            if amount is not None:
+                return abs(amount)
+            if idx + 1 < len(lines):
+                amount_next = _extract_money_value(lines[idx + 1])
+                if amount_next is not None:
+                    return abs(amount_next)
     
     return None
 
@@ -136,15 +152,15 @@ def extract_tax(text: str) -> Optional[float]:
         return None
     
     lines = text.split('\n')
-    for line in lines:
+    for idx, line in enumerate(lines):
         if re.search(r'\b(TAX|GST|SALES\s+TAX)\b', line, re.IGNORECASE):
-            match = re.search(r'\$WARNING:\s*(\d+[.,]\d{2})', line)
-            if match:
-                amount_str = match.group(1).replace(',', '')
-                try:
-                    return float(amount_str)
-                except ValueError:
-                    continue
+            amount = _extract_money_value(line)
+            if amount is not None:
+                return abs(amount)
+            if idx + 1 < len(lines):
+                amount_next = _extract_money_value(lines[idx + 1])
+                if amount_next is not None:
+                    return abs(amount_next)
     
     return None
 
@@ -155,15 +171,15 @@ def extract_tip(text: str) -> Optional[float]:
         return None
     
     lines = text.split('\n')
-    for line in lines:
+    for idx, line in enumerate(lines):
         if re.search(r'\b(TIP|GRATUITY)\b', line, re.IGNORECASE):
-            match = re.search(r'\$WARNING:\s*(\d+[.,]\d{2})', line)
-            if match:
-                amount_str = match.group(1).replace(',', '')
-                try:
-                    return float(amount_str)
-                except ValueError:
-                    continue
+            amount = _extract_money_value(line)
+            if amount is not None:
+                return abs(amount)
+            if idx + 1 < len(lines):
+                amount_next = _extract_money_value(lines[idx + 1])
+                if amount_next is not None:
+                    return abs(amount_next)
     
     return None
 

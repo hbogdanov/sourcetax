@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Evaluate rules/ML/hybrid predictions against gold truth and produce rollout reports."""
 
 from __future__ import annotations
@@ -88,7 +88,7 @@ def _acc(rows: List[Dict[str, Any]], pred_key: str) -> float:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--gold", default="data/gold/gold_transactions.jsonl")
-    parser.add_argument("--out-dir", default="outputs/reports")
+    parser.add_argument("--out-dir", default="artifacts/reports")
     parser.add_argument("--candidate-threshold", type=float, default=0.85)
     parser.add_argument("--candidate-ml-min", type=float, default=0.0)
     args = parser.parse_args()
@@ -246,4 +246,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Export targeted Batch 003 for low-support categories in gold.
 
 Targets:
@@ -170,10 +170,10 @@ def _to_output_row(row: Dict, target_category: str) -> Dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--staging-db", default="data/staging.db")
+    parser.add_argument("--staging-db", default="data/interim/staging.db")
     parser.add_argument("--table", default="staging_transactions_enriched")
     parser.add_argument("--gold-path", default="data/gold/gold_transactions.jsonl")
-    parser.add_argument("--out", default="outputs/label_batch_003.csv")
+    parser.add_argument("--out", default="artifacts/labeling/label_batch_003.csv")
     parser.add_argument("--per-category", type=int, default=20)
     args = parser.parse_args()
 
@@ -239,4 +239,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
 

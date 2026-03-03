@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Export ML-vs-rule disagreement rows for human review while hybrid stays shadow-only."""
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def _record_key(row: sqlite3.Row, payload: Dict[str, Any]) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", default="data/staging.db")
+    parser.add_argument("--db", default="data/interim/staging.db")
     parser.add_argument(
         "--table",
         default="staging_transactions",
@@ -72,8 +72,8 @@ def main() -> int:
     parser.add_argument("--rule-conf-max", type=float, default=0.70)
     parser.add_argument("--ml-conf-min", type=float, default=0.30)
     parser.add_argument("--limit", type=int, default=0, help="0 means no limit")
-    parser.add_argument("--out-csv", default="outputs/reports/shadow_review_candidates.csv")
-    parser.add_argument("--out-json", default="outputs/reports/shadow_review_candidates_summary.json")
+    parser.add_argument("--out-csv", default="artifacts/reports/shadow_review_candidates.csv")
+    parser.add_argument("--out-json", default="artifacts/reports/shadow_review_candidates_summary.json")
     args = parser.parse_args()
 
     db = Path(args.db)
@@ -176,4 +176,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

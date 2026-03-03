@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Profile staging values to drive gradual mapping updates.
 
 Reports:
@@ -37,7 +37,7 @@ def _fetch_counts(conn: sqlite3.Connection, column: str, limit: int) -> list[tup
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--staging-db", default="data/staging.db")
+    parser.add_argument("--staging-db", default="data/interim/staging.db")
     parser.add_argument("--limit", type=int, default=50)
     args = parser.parse_args()
 
@@ -75,4 +75,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

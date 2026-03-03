@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Export sparse-category-only labeling batch with aggressive merchant/MCC heuristics."""
 
 from __future__ import annotations
@@ -169,11 +169,11 @@ def _to_row(r: Dict, target: str) -> Dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--staging-db", default="data/staging.db")
+    parser.add_argument("--staging-db", default="data/interim/staging.db")
     parser.add_argument("--table", default="staging_transactions_enriched")
     parser.add_argument("--gold-path", default="data/gold/gold_transactions.jsonl")
-    parser.add_argument("--out", default="outputs/label_batch_006_sparse.csv")
-    parser.add_argument("--summary-out", default="outputs/reports/label_batch_006_sparse_summary.json")
+    parser.add_argument("--out", default="artifacts/labeling/label_batch_006_sparse.csv")
+    parser.add_argument("--summary-out", default="artifacts/reports/label_batch_006_sparse_summary.json")
     parser.add_argument("--per-category", type=int, default=25)
     args = parser.parse_args()
 
@@ -253,4 +253,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
 

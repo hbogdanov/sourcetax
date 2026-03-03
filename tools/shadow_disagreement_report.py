@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Report shadow-mode disagreement rates and slices."""
 
 from __future__ import annotations
@@ -59,13 +59,13 @@ def _fetch_rows(conn: sqlite3.Connection, table: str) -> List[sqlite3.Row]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", default="data/staging.db")
+    parser.add_argument("--db", default="data/interim/staging.db")
     parser.add_argument(
         "--table",
         default="staging_transactions",
         choices=["staging_transactions", "canonical_records"],
     )
-    parser.add_argument("--out", default="outputs/reports/shadow_disagreement_report.json")
+    parser.add_argument("--out", default="artifacts/reports/shadow_disagreement_report.json")
     args = parser.parse_args()
 
     db = Path(args.db)
@@ -173,3 +173,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

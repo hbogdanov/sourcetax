@@ -70,7 +70,7 @@ def main():
 
     logger.info("Starting smoke run: ingest -> match -> categorize -> export")
     db_path = Path("tmp/smoke_store.db")
-    out_csv = Path("outputs/smoke_quickbooks_import.csv")
+    out_csv = Path("artifacts/exports/smoke_quickbooks_import.csv")
     db_path.parent.mkdir(parents=True, exist_ok=True)
     out_csv.parent.mkdir(parents=True, exist_ok=True)
 
@@ -190,9 +190,9 @@ def main():
 
     if args.strict:
         _assert_smoke_outputs(db_path, out_csv)
-        benchmark_report = Path("reports/phase3_eval.md")
+        benchmark_report = Path("artifacts/reports/phase3_eval.md")
         if not benchmark_report.exists() or benchmark_report.stat().st_size == 0:
-            raise AssertionError("Benchmark report missing/empty: reports/phase3_eval.md")
+            raise AssertionError("Benchmark report missing/empty: artifacts/reports/phase3_eval.md")
         for step_name, code in eval_exit_codes:
             if code != 0:
                 raise AssertionError(f"Eval step failed in strict mode: {step_name} (exit={code})")

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Train an enriched ML artifact on a locked train split and evaluate on locked holdout only."""
 
 from __future__ import annotations
@@ -245,7 +245,7 @@ def main() -> int:
     parser.add_argument("--split-path", default="artifacts/holdout_locked/split_manifest.json")
     parser.add_argument("--artifact-path", default="artifacts/holdout_locked/ml_enriched_tfidf_pipeline.joblib")
     parser.add_argument("--metadata-path", default="artifacts/holdout_locked/ml_enriched_metadata.json")
-    parser.add_argument("--report-dir", default="outputs/reports/holdout_locked")
+    parser.add_argument("--report-dir", default="artifacts/reports/holdout_locked")
     parser.add_argument("--holdout-size", type=float, default=0.20)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--threshold", type=float, default=0.85)
@@ -428,4 +428,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

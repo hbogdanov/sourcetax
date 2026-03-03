@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """Report and export Stage-1 hybrid prod-candidate flips from shadow logs."""
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ def _record_key(row: sqlite3.Row, payload: Dict[str, Any]) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", default="data/staging.db")
+    parser.add_argument("--db", default="data/interim/staging.db")
     parser.add_argument(
         "--table",
         default="staging_transactions",
@@ -73,9 +73,9 @@ def main() -> int:
     )
     parser.add_argument("--review-sample-size", type=int, default=30)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--out-csv", default="outputs/reports/hybrid_prod_candidate_flips.csv")
-    parser.add_argument("--out-sample-csv", default="outputs/reports/hybrid_prod_candidate_flips_sample.csv")
-    parser.add_argument("--out-json", default="outputs/reports/hybrid_prod_candidate_summary.json")
+    parser.add_argument("--out-csv", default="artifacts/reports/hybrid_prod_candidate_flips.csv")
+    parser.add_argument("--out-sample-csv", default="artifacts/reports/hybrid_prod_candidate_flips_sample.csv")
+    parser.add_argument("--out-json", default="artifacts/reports/hybrid_prod_candidate_summary.json")
     args = parser.parse_args()
 
     db = Path(args.db)
@@ -236,3 +236,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

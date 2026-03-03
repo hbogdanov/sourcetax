@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-"""Generate realistic receipt↔bank matched pairs + non-matches for eval realism.
+﻿#!/usr/bin/env python
+"""Generate realistic receiptâ†”bank matched pairs + non-matches for eval realism.
 
 Writes:
 1) synthetic receipt and bank rows into staging DB
@@ -258,7 +258,7 @@ def _make_negative_case(
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--staging-db", default="data/staging.db")
+    parser.add_argument("--staging-db", default="data/interim/staging.db")
     parser.add_argument("--pair-count", type=int, default=50, help="Number of positive matched pairs.")
     parser.add_argument(
         "--mini-out",
@@ -351,4 +351,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 
