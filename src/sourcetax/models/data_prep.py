@@ -11,6 +11,7 @@ from typing import List, Tuple, Dict
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sourcetax.gold import filter_human_labeled_gold
+from sourcetax.text import combine_text_fields
 
 
 def load_gold_set(gold_path: Path = None) -> List[Dict]:
@@ -51,7 +52,7 @@ def prepare_ml_records(gold_records: List[Dict]) -> pd.DataFrame:
         description = record.get("raw_payload", {}).get("description", "").strip()
         
         # Combine into single text feature
-        text = f"{merchant} {description}".strip()
+        text = combine_text_fields([merchant, description])
         
         if text:
             data.append({

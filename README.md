@@ -57,6 +57,19 @@ Data layout (versioned):
 - `data/mappings/` - mapping tables and rules inputs
 - `data/samples/` - small demo inputs
 
+External dataset reference:
+
+- `docs/dataset_sources_guide.md` - curated list of useful/non-useful external datasets for SourceTax
+- `docs/product_strategy_and_roadmap.md` - architecture decisions, positioning, metrics, and 4-week roadmap
+
+Generated ML artifacts (not versioned):
+
+- `data/ml/` - transient local split/export files
+- `artifacts/models/` - model artifacts
+- `artifacts/metrics/` - run metrics JSON
+- `artifacts/reports/` - split IDs and comparison reports
+- `artifacts/runs/<run_id>/run.json` - canonical index tying config, input hashes, outputs, and git commit (if available)
+
 ## Canonical Transaction Contract
 
 Every transaction follows:
@@ -98,6 +111,16 @@ pip install -e .
 pytest
 ```
 
+Data-contract quick checks (mentor-friendly):
+
+```bash
+make validate-gold
+make validate-taxonomy
+make smoke
+```
+
+Run those three commands and you know the repository contract checks are passing.
+
 3) Run evaluation on gold
 
 ```bash
@@ -109,6 +132,82 @@ python tools/eval.py
 ```bash
 python tools/train_ml_baseline.py
 ```
+
+5) Compare configs on identical splits
+
+```bash
+python tools/model_comparison.py
+```
+
+Gold-only comparison mode (no external corpora or HF token required):
+
+```bash
+python tools/model_comparison.py --gold-only
+```
+
+6) Optional external warm-start (MitulShah)
+
+```bash
+make import-hf-mitulshah
+make build-mitulshah-corpus
+make train-mitulshah-baseline
+python tools/train_ml_baseline.py --vectorizer-vocab-from data/external/mitulshah_corpus_train.parquet
+```
+
+If the warm-start path does not exist, `train_ml_baseline.py` exits with a clear message. The core flow runs without Mitul data/token by omitting warm-start flags.
+
+## Evaluation Protocol
+
+Treat these as separate tasks:
+
+- Mitul task: predict Mitul labels from transaction description (internal sanity only)
+- SourceTax task: predict `sourcetax_category_v1` on gold (this is the product metric)
+
+Mitul internal sanity check (deterministic train/val/test):
+
+```bash
+python tools/train_mitulshah_baseline.py
+```
+
+Robustness sweep on Mitul preprocessing:
+
+```bash
+make eval-mitul-robustness
+```
+
+Gold transfer test on identical splits (real test):
+
+```bash
+python tools/model_comparison.py
+```
+
+One-liner end-to-end transfer evaluation (recommended):
+
+```bash
+make eval-transfer
+```
+
+This runs:
+
+- Mitul sanity eval (sampled)
+- Mitul robustness sweep
+- Gold-only reference comparison
+- Full transfer comparison
+
+and writes one consolidated report:
+
+- `artifacts/reports/eval_transfer_<run_id>.md`
+- `artifacts/reports/eval_transfer_<run_id>.json`
+
+Focus on `macro_f1` first, then per-class F1 for:
+
+- `Repairs & Maintenance`
+- `Rent & Utilities`
+- `Financial Fees`
+- `Income`
+- `Meals & Entertainment`
+
+`model_comparison.py` now emits an ROI table and confusion-pair deltas in its report to spot drift and class bias.
 
 ## Roadmap
 

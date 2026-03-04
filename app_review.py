@@ -431,11 +431,35 @@ def render_record_detail_panel(record: Dict[str, Any], queue_row: Optional[Dict[
         x1, x2, x3 = st.columns([2.2, 1.1, 1.1])
         with x1:
             override = st.selectbox("Override category", options, index=idx, key=f"override_{rec.get('id')}")
+        confidence_key = f"label_confidence_{rec.get('id')}"
+        notes_key = f"label_notes_{rec.get('id')}"
+        default_conf = str((rec.get("raw_payload") or {}).get("label_confidence") or "medium").strip().lower()
+        if default_conf not in {"high", "medium", "low"}:
+            default_conf = "medium"
+        label_confidence = st.selectbox(
+            "Label confidence",
+            ["high", "medium", "low"],
+            index=["high", "medium", "low"].index(default_conf),
+            key=confidence_key,
+        )
+        label_notes = st.text_area(
+            "Label notes (optional)",
+            value=str((rec.get("raw_payload") or {}).get("label_notes") or ""),
+            key=notes_key,
+            height=80,
+            placeholder="Why this label? Add ambiguity/context if needed.",
+        )
         with x2:
             if st.button("Approve", key=f"approve_{rec.get('id')}", width="stretch"):
                 try:
                     to_save = "Other Expense" if current == "Uncategorized" else current
-                    categorization.save_category_override(rec["id"], to_save, DB_PATH)
+                    categorization.save_category_override(
+                        rec["id"],
+                        to_save,
+                        DB_PATH,
+                        label_confidence=label_confidence,
+                        label_notes=label_notes,
+                    )
                     st.success(f"Saved category: {to_save}")
                     st.rerun()
                 except ValueError as exc:
@@ -444,7 +468,13 @@ def render_record_detail_panel(record: Dict[str, Any], queue_row: Optional[Dict[
             if st.button("Save", key=f"save_{rec.get('id')}", width="stretch"):
                 try:
                     to_save = "Other Expense" if override == "Uncategorized" else override
-                    categorization.save_category_override(rec["id"], to_save, DB_PATH)
+                    categorization.save_category_override(
+                        rec["id"],
+                        to_save,
+                        DB_PATH,
+                        label_confidence=label_confidence,
+                        label_notes=label_notes,
+                    )
                     st.success(f"Saved category: {to_save}")
                     st.rerun()
                 except ValueError as exc:

@@ -6,7 +6,7 @@ Simple. Interpretable. Strong baseline.
 
 import pickle
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -27,7 +27,10 @@ def load_train_val(
     return train_df, val_df
 
 
-def build_pipeline() -> Pipeline:
+def build_pipeline(
+    random_state: int = 42,
+    tfidf_params: Optional[dict] = None,
+) -> Pipeline:
     """
     Build TF-IDF + LogisticRegression pipeline.
     
@@ -41,18 +44,21 @@ def build_pipeline() -> Pipeline:
     - max_iter=200: enough for convergence
     - class_weight="balanced": handle category imbalance
     """
-    tfidf = TfidfVectorizer(
-        ngram_range=(1, 2),
-        min_df=2,
-        max_features=5000,
-        lowercase=True,
-        stop_words="english",
-    )
+    params = {
+        "ngram_range": (1, 2),
+        "min_df": 2,
+        "max_features": 5000,
+        "lowercase": True,
+        "stop_words": "english",
+    }
+    if tfidf_params:
+        params.update(tfidf_params)
+    tfidf = TfidfVectorizer(**params)
     
     classifier = LogisticRegression(
         max_iter=200,
         class_weight="balanced",
-        random_state=42,
+        random_state=random_state,
     )
     
     return Pipeline([
@@ -64,6 +70,8 @@ def build_pipeline() -> Pipeline:
 def train_baseline(
     train_df: pd.DataFrame,
     val_df: pd.DataFrame = None,
+    random_state: int = 42,
+    tfidf_params: Optional[dict] = None,
 ) -> Tuple[Pipeline, dict]:
     """
     Train baseline model.
@@ -76,7 +84,7 @@ def train_baseline(
         (pipeline, metrics_dict)
     """
     print("BUILD: Building pipeline...")
-    pipeline = build_pipeline()
+    pipeline = build_pipeline(random_state=random_state, tfidf_params=tfidf_params)
     
     print("TRAIN: Training on {} records...".format(len(train_df)))
     pipeline.fit(train_df["text"], train_df["category"])
@@ -84,6 +92,8 @@ def train_baseline(
     metrics = {
         "train_records": len(train_df),
         "vocabulary_size": len(pipeline.named_steps["tfidf"].vocabulary_),
+        "random_state": int(random_state),
+        "tfidf_params": pipeline.named_steps["tfidf"].get_params(),
     }
     
     # Validation metrics (if provided)

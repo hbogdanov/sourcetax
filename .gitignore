@@ -16,6 +16,7 @@ venv/
 
 # Data + outputs
 data/interim/
+data/ml/
 data/raw/
 data/external/
 data/store.db

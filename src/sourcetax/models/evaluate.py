@@ -20,29 +20,8 @@ from sklearn.metrics import (
 )
 from difflib import SequenceMatcher
 import csv
-
-
-# Keywords for rules engine (from categorization.py)
-KEYWORD_RULES = {
-    "HOME DEPOT": "Repairs and Maintenance",
-    "LOWES": "Repairs and Maintenance",
-    "AMAZON": "Office Supplies",
-    "OFFICE DEPOT": "Office Supplies",
-    "STAPLES": "Office Supplies",
-    "UBER": "Travel",
-    "LYFT": "Travel",
-    "GAS": "Travel",
-    "CHEVRON": "Travel",
-    "STARBUCKS": "Meals and Lodging",
-    "CAFE": "Meals and Lodging",
-    "RESTAURANT": "Meals and Lodging",
-    "HOTEL": "Travel",
-    "AIRBNB": "Travel",
-    "UTILITY": "Utilities",
-    "INTERNET": "Utilities",
-    "INSURANCE": "Insurance",
-    "TAX": "Taxes",
-}
+from sourcetax import mapping
+from sourcetax.taxonomy import normalize_category_name
 
 
 def load_merchant_category_map(path: str = "data/mappings/merchant_category.csv") -> Dict[str, str]:
@@ -57,7 +36,7 @@ def load_merchant_category_map(path: str = "data/mappings/merchant_category.csv"
             reader = csv.DictReader(f)
             for row in reader:
                 merchant = row.get("merchant", "").strip().upper()
-                category = row.get("category_name", "").strip()
+                category = normalize_category_name(row.get("category_name", "").strip())
                 if merchant and category:
                     mapping[merchant] = category
     except Exception:
@@ -76,20 +55,31 @@ def apply_rules(text: str, merchant_map: Dict[str, str]) -> Tuple[str, float]:
     3. Uncategorized
     """
     if not text:
-        return "Uncategorized", 0.0
-    
-    merchant_norm = text.split()[0].upper() if text else ""
+        return "Other Expense", 0.0
+
+    text_norm = str(text or "").strip()
+    merchant_norm = text_norm.split()[0].upper() if text_norm else ""
     
     # Exact match
     if merchant_norm in merchant_map:
         return merchant_map[merchant_norm], 0.95
-    
-    # Keyword match
-    for keyword, category in KEYWORD_RULES.items():
-        if keyword in text.upper():
-            return category, 0.6
-    
-    return "Uncategorized", 0.3
+
+    resolved, reasons = mapping.resolve_category_with_reason(
+        merchant_raw=text_norm,
+        description=text_norm,
+        fallback="Other Expense",
+    )
+    confidence = 0.3
+    if reasons:
+        first = reasons[0]
+        if first.startswith("keyword:"):
+            confidence = 0.9
+        elif first.startswith("mcc:") or first.startswith("mcc_description:"):
+            confidence = 0.85
+        elif first.startswith("external:"):
+            confidence = 0.7
+    resolved = normalize_category_name(resolved) or "Other Expense"
+    return resolved, confidence
 
 
 def load_test_set(data_dir: Path = None) -> pd.DataFrame:
