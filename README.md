@@ -1,8 +1,42 @@
 ﻿# SourceTax
 
-SourceTax is an AI-driven transaction classification and tax automation pipeline for small businesses.
+SourceTax automatically converts messy financial transaction data (bank exports, card statements, receipt records) into categorized, accounting-ready transactions aligned with IRS Schedule C categories.
 
-It ingests raw financial transaction data (bank exports, card data, receipt records), normalizes everything into a clean canonical schema, categorizes transactions into IRS Schedule C-aligned tax categories, and produces accounting-grade outputs such as General Ledger lines and audit-ready exports.
+It ingests raw financial data, normalizes it into a canonical transaction schema, standardizes merchants, classifies transactions with rules and ML, and produces accounting-grade outputs such as General Ledger lines and audit-ready exports.
+
+## Pipeline
+
+```text
+Raw financial data
+      ↓
+Normalization
+      ↓
+Canonical transaction schema
+      ↓
+Merchant normalization
+      ↓
+Categorization (rules + ML)
+      ↓
+Evaluation
+      ↓
+Accounting exports (GL lines, audit logs)
+```
+
+## Example
+
+Input:
+
+```text
+Starbucks Store 1234 - $8.75
+```
+
+Output:
+
+```text
+merchant_norm: Starbucks
+category: Meals & Entertainment
+direction: expense
+```
 
 ## Problem
 
@@ -111,7 +145,7 @@ pip install -e .
 pytest
 ```
 
-Data-contract quick checks (mentor-friendly):
+Data-contract quick checks:
 
 ```bash
 make validate-gold
