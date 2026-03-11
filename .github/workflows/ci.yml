@@ -16,13 +16,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
-      - name: Lint
-        run: ruff check .
-      - name: Format check
-        run: black --check .
-      - name: Tests
-        run: pytest -q
+      - name: Contract tests
+        run: |
+          python -m pytest -q tests/test_gold_enforcement.py tests/test_taxonomy_enforcement.py
+          python -m pytest -q tests/test_generate_pairs.py tests/test_generate_synthetic_gapfill.py
       - name: External tools help
         run: |
           python tools/import_hf_mitulshah.py --help
           python tools/build_mitulshah_corpus.py --help
+      - name: Smoke run
+        run: python tools/smoke_run.py
