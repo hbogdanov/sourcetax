@@ -1,258 +1,116 @@
-﻿# SourceTax
+# SourceTax
 
-SourceTax automatically converts messy financial transaction data (bank exports, card statements, receipt records) into categorized, accounting-ready transactions aligned with IRS Schedule C categories.
+SourceTax turns messy transaction exports into categorized, accounting-ready records for tax prep.
 
-It ingests raw financial data, normalizes it into a canonical transaction schema, standardizes merchants, classifies transactions with rules and ML, and produces accounting-grade outputs such as General Ledger lines and audit-ready exports.
+It takes raw bank or POS data, normalizes merchants into a canonical schema, classifies each transaction, and exports enriched transactions, GL lines, and audit-ready logs.
 
-## Pipeline
+## Killer Demo
 
-```text
-Raw financial data
-      ↓
-Normalization
-      ↓
-Canonical transaction schema
-      ↓
-Merchant normalization
-      ↓
-Categorization (rules + ML)
-      ↓
-Evaluation
-      ↓
-Accounting exports (GL lines, audit logs)
+Run one command:
+
+```bash
+python run_pipeline.py --input data/samples/bank_sample.csv
 ```
 
-## Example
-
-Input:
+Before:
 
 ```text
-Starbucks Store 1234 - $8.75
+STARBUCKS #1234  ATLANTA GA   -5.87
 ```
 
-Output:
+After:
 
 ```text
-merchant_norm: Starbucks
-category: Meals & Entertainment
-direction: expense
+Category: Meals & Entertainment
+Merchant: starbucks
+Tax Class: Deductible Expense
 ```
 
-## Problem
+## Why It Feels Like A Product
 
-Small businesses operate across fragmented financial systems:
+- One entrypoint runs normalization, classification, and export end to end.
+- Outputs are product-shaped: enriched transactions CSV, GL lines CSV, audit trail JSONL, and QuickBooks import CSV.
+- The taxonomy maps to Schedule C style small-business expense categories.
 
-- Bank CSV exports
-- Card processor exports
-- Receipt images and receipt platforms
-- Manual bookkeeping
+## Measured Lift
 
-These sources are inconsistent and noisy, which makes reconciliation and tax categorization slow and error-prone.
+On a held-out split of the 589-row gold dataset, the ML baseline improved classification accuracy from `2.2%` rules-only to `68.5%` on the same test set.
 
-SourceTax automates:
+Source artifact:
 
-- Transaction normalization
-- Merchant cleaning and alias mapping
-- Tax category classification (rules and ML)
-- Accounting-ready exports
+- `artifacts/metrics/gold_ml_baseline_metrics_sanity_gold_only_20260303_baseline.json`
 
-## Current Status (Phase 3-4)
+## Repo Layout
 
-Implemented:
+```text
+src/sourcetax/          core library
+tools/data_pipeline/    ingestion, smoke runs, exports
+tools/training/         model training scripts
+tools/evaluation/       benchmarking and comparison
+data/                   taxonomy, mappings, gold labels, sample inputs
+tests/                  unit and integration tests
+```
 
-- Canonical transaction schema enforcement
-- Gold dataset (validated, unique, canonical)
-- Rule-based categorization engine
-- TF-IDF + Logistic Regression baseline
-- Optional SBERT embedding pipeline
-- Hybrid rules and ML evaluation framework
-- Accounting-grade exports:
-  - Enriched transactions CSV
-  - General Ledger lines CSV
-  - Audit trail JSONL
-- Dataset validation tests and full pytest suite
-
-Gold dataset: 589 labeled transactions (validated and unique).
-
-## Architecture Overview
-
-Raw Data -> Normalization -> Canonical Schema -> Merchant Normalization -> Categorization (Rules / ML / Hybrid) -> Evaluation -> Accounting Exports
-
-Core code:
-
-- `src/sourcetax/` - main library (schema, normalization, categorization, exports)
-- `tools/` - scripts for training, evaluation, and batch processing
-- `tests/` - unit and integration tests
-
-Data layout (versioned):
-
-- `data/gold/` - curated labeled dataset
-- `data/taxonomy/` - category taxonomy
-- `data/mappings/` - mapping tables and rules inputs
-- `data/samples/` - small demo inputs
-
-External dataset reference:
-
-- `docs/dataset_sources_guide.md` - curated list of useful/non-useful external datasets for SourceTax
-- `docs/product_strategy_and_roadmap.md` - architecture decisions, positioning, metrics, and 4-week roadmap
-
-Generated ML artifacts (not versioned):
-
-- `data/ml/` - transient local split/export files
-- `artifacts/models/` - model artifacts
-- `artifacts/metrics/` - run metrics JSON
-- `artifacts/reports/` - split IDs and comparison reports
-- `artifacts/runs/<run_id>/run.json` - canonical index tying config, input hashes, outputs, and git commit (if available)
-
-## Canonical Transaction Contract
-
-Every transaction follows:
-
-- `amount` (always positive)
-- `direction` (`expense` or `income`)
-- `currency`
-- `transaction_date`
-- `merchant_raw`
-- `merchant_norm`
-- `source`
-- `source_record_id`
-- `sourcetax_category_v1`
-
-Gold data enforces:
-
-- Unique `id`
-- Unique `source_record_id`
-- No missing required fields
-- Valid taxonomy membership
+Legacy `tools/*.py` wrappers still work, but the grouped directories are the primary layout now.
 
 ## Quick Start
 
-1) Install
+Install:
 
 ```bash
 make setup
 ```
 
-or
+Run the product demo:
 
 ```bash
-pip install -e .
+python run_pipeline.py --input data/samples/bank_sample.csv
 ```
 
-2) Run tests
+Run validation and smoke checks:
 
 ```bash
 pytest
-```
-
-Data-contract quick checks:
-
-```bash
 make validate-gold
 make validate-taxonomy
 make smoke
 ```
 
-Run those three commands and you know the repository contract checks are passing.
+## Core Commands
 
-3) Run evaluation on gold
-
-```bash
-python tools/eval.py
-```
-
-4) Train the ML baseline
+Evaluation:
 
 ```bash
-python tools/train_ml_baseline.py
+python tools/evaluation/eval.py
+python tools/evaluation/model_comparison.py --gold-only
 ```
 
-5) Compare configs on identical splits
+Training:
 
 ```bash
-python tools/model_comparison.py
+python tools/training/train_ml_baseline.py
+python tools/training/train_mitulshah_baseline.py
 ```
 
-Gold-only comparison mode (no external corpora or HF token required):
+Pipeline exports:
 
 ```bash
-python tools/model_comparison.py --gold-only
+python tools/data_pipeline/phase4_run.py
 ```
 
-6) Optional external warm-start (MitulShah)
+## What SourceTax Does
 
-```bash
-make import-hf-mitulshah
-make build-mitulshah-corpus
-make train-mitulshah-baseline
-python tools/train_ml_baseline.py --vectorizer-vocab-from data/external/mitulshah_corpus_train.parquet
-```
+- Normalizes raw transactions into a canonical schema.
+- Cleans merchant names and aliases.
+- Classifies transactions with rules and ML.
+- Produces accounting-grade exports with audit traceability.
 
-If the warm-start path does not exist, `train_ml_baseline.py` exits with a clear message. The core flow runs without Mitul data/token by omitting warm-start flags.
+## Current Dataset + Outputs
 
-## Evaluation Protocol
-
-Treat these as separate tasks:
-
-- Mitul task: predict Mitul labels from transaction description (internal sanity only)
-- SourceTax task: predict `sourcetax_category_v1` on gold (this is the product metric)
-
-Mitul internal sanity check (deterministic train/val/test):
-
-```bash
-python tools/train_mitulshah_baseline.py
-```
-
-Robustness sweep on Mitul preprocessing:
-
-```bash
-make eval-mitul-robustness
-```
-
-Gold transfer test on identical splits (real test):
-
-```bash
-python tools/model_comparison.py
-```
-
-One-liner end-to-end transfer evaluation (recommended):
-
-```bash
-make eval-transfer
-```
-
-This runs:
-
-- Mitul sanity eval (sampled)
-- Mitul robustness sweep
-- Gold-only reference comparison
-- Full transfer comparison
-
-and writes one consolidated report:
-
-- `artifacts/reports/eval_transfer_<run_id>.md`
-- `artifacts/reports/eval_transfer_<run_id>.json`
-
-Focus on `macro_f1` first, then per-class F1 for:
-
-- `Repairs & Maintenance`
-- `Rent & Utilities`
-- `Financial Fees`
-- `Income`
-- `Meals & Entertainment`
-
-`model_comparison.py` now emits an ROI table and confusion-pair deltas in its report to spot drift and class bias.
-
-## Roadmap
-
-Next:
-
-- Expand gold dataset volume and diversity
-- Active learning loop (high-uncertainty sampling)
-- Labeling UI workflow for rapid gold growth
-- Real ingestion integrations (Plaid-style, POS exports)
-- Multi-user cloud deployment
-
-## Vision
-
-SourceTax aims to be an automated tax intelligence layer between raw financial data and accounting systems, reducing manual bookkeeping and enabling accurate, audit-ready reporting for small businesses.
+- Gold dataset: `589` validated labeled transactions.
+- Versioned taxonomy: `data/taxonomy/sourcetax_v1.json`
+- Export bundle:
+  - `accounting_transactions_enriched.csv`
+  - `gl_lines.csv`
+  - `audit_trail.jsonl`
+  - `quickbooks_import.csv`

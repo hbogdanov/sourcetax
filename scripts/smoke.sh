@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 set -eu
 
-python tools/smoke_run.py
+python tools/data_pipeline/smoke_run.py

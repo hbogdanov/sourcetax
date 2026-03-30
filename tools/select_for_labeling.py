@@ -49,7 +49,7 @@ def get_predictions(
     
     if not pipeline_path.exists():
         print(f"ERROR: Pipeline not found at {pipeline_path}")
-        print("   Run: python tools/train_ml_baseline.py")
+        print("   Run: python tools/training/train_ml_baseline.py")
         return None
     
     with open(pipeline_path, "rb") as f:
@@ -105,7 +105,7 @@ def main():
             pool_df = pd.read_csv(test_path)
             print(f"Using test set ({len(pool_df)} samples)")
         else:
-            print("Run: python tools/train_ml_baseline.py")
+            print("Run: python tools/training/train_ml_baseline.py")
             return 1
     
     print(f"Pool size: {len(pool_df)}")
@@ -154,7 +154,7 @@ def main():
     print("NEXT STEPS:")
     print("1. Review selected samples in app_review.py")
     print("2. Label them (mark matches, override categories)")
-    print("3. Re-run: python tools/train_ml_baseline.py")
+    print("3. Re-run: python tools/training/train_ml_baseline.py")
     print("=" * 80)
     
     return 0

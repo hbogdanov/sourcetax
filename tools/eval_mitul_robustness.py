@@ -57,7 +57,7 @@ def main() -> int:
 
     common = [
         sys.executable,
-        "tools/train_mitulshah_baseline.py",
+        "tools/training/train_mitulshah_baseline.py",
         "--corpus",
         args.corpus,
         "--seed",

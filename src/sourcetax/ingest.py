@@ -115,8 +115,11 @@ def read_csv(path: str, source: str) -> Iterable[CanonicalRecord]:
     p = Path(path)
     with p.open(newline="") as fh:
         reader = csv.DictReader(fh)
-        for r in reader:
+        for idx, r in enumerate(reader, start=1):
             norm = normalize_to_canonical(r, source)
+            fallback_id = f"{source}:{p.stem}:{idx}"
+            norm["source_record_id"] = norm.get("source_record_id") or fallback_id
+            norm["id"] = norm.get("id") or norm["source_record_id"]
             yield CanonicalRecord.from_normalized(norm)
 
 

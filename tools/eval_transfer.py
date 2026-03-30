@@ -99,7 +99,7 @@ def main() -> int:
     # A) Mitul sanity evaluation
     sanity_cmd = [
         sys.executable,
-        "tools/train_mitulshah_baseline.py",
+        "tools/training/train_mitulshah_baseline.py",
         "--corpus",
         args.mitul_corpus,
         "--sample-size",
@@ -133,7 +133,7 @@ def main() -> int:
     # B) Mitul robustness sweep
     robustness_cmd = [
         sys.executable,
-        "tools/eval_mitul_robustness.py",
+        "tools/evaluation/eval_mitul_robustness.py",
         "--corpus",
         args.mitul_corpus,
         "--seed",
@@ -161,7 +161,7 @@ def main() -> int:
     # C1) Gold-only baseline reference
     gold_ref_cmd = [
         sys.executable,
-        "tools/model_comparison.py",
+        "tools/evaluation/model_comparison.py",
         "--gold-only",
         "--gold",
         args.gold,
@@ -180,7 +180,7 @@ def main() -> int:
     # C2) Full transfer comparison (includes warm-start if artifacts exist)
     transfer_cmd = [
         sys.executable,
-        "tools/model_comparison.py",
+        "tools/evaluation/model_comparison.py",
         "--gold",
         args.gold,
         "--vocab-from",

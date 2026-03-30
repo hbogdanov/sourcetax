@@ -169,8 +169,8 @@ def main():
     # Best-effort evaluations. These should not fail the smoke run.
     eval_exit_codes = []
     for cmd in (
-        [sys.executable, "tools/eval.py"],
-        [sys.executable, "tools/phase3_benchmark.py", "--allow-small"],
+        [sys.executable, "tools/evaluation/eval.py"],
+        [sys.executable, "tools/evaluation/phase3_benchmark.py", "--allow-small"],
     ):
         try:
             logger.info("Running evaluation step: %s", " ".join(cmd[1:]))

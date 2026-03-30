@@ -304,7 +304,14 @@ def main() -> int:
     base_splits = Path(f"artifacts/reports/gold_ml_baseline_split_ids_{run_id}_baseline.json")
     all_metrics_paths = [base_metrics]
 
-    common = [sys.executable, "tools/train_ml_baseline.py", "--gold", args.gold, "--seed", str(args.seed)]
+    common = [
+        sys.executable,
+        "tools/training/train_ml_baseline.py",
+        "--gold",
+        args.gold,
+        "--seed",
+        str(args.seed),
+    ]
     _run(
         common
         + [
