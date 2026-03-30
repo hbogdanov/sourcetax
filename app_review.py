@@ -1,14 +1,11 @@
-﻿"""
+"""
 SourceTax Review UI (Streamlit).
 
-Goals:
-- Fast skimmable dashboard for demos
-- Human-in-the-loop review queue
-- Matching review with score breakdown
-- Export visibility (accounting outputs)
-- Gold set progress / labeling workflow controls
-
-This app avoids brittle JSON parsing by using safe decoding for DB fields.
+Workflow:
+1. Upload / ingest
+2. Review grid
+3. Exceptions / review queue
+4. Export
 """
 
 from __future__ import annotations
@@ -26,15 +23,14 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 import streamlit as st
 
-# Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from sourcetax import categorization, exporter, matching, reconciliation, storage, taxonomy
+from sourcetax import categorization, exporter, ingest, matching, reconciliation, storage, taxonomy
 
 
 DB_PATH = "data/store.db"
 GOLD_PATH = "data/gold/gold_transactions.jsonl"
-GOLD_TARGET = 200
+UPLOAD_DIR = Path("tmp/ui_uploads")
 
 
 st.set_page_config(page_title="SourceTax Review", page_icon=None, layout="wide")
@@ -44,18 +40,13 @@ def inject_styles() -> None:
     st.markdown(
         """
         <style>
-          .main .block-container {max-width: 1150px; padding-top: 1.2rem; padding-bottom: 2rem;}
-          .app-title {font-size: 1.8rem; font-weight: 800; margin-bottom: 0.15rem;}
+          .main .block-container {max-width: 1350px; padding-top: 1rem; padding-bottom: 2rem;}
+          .app-title {font-size: 1.9rem; font-weight: 800; margin-bottom: 0.2rem;}
           .app-sub {color: #5b6773; margin-bottom: 0.9rem;}
-          .mono {font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
-
-          /* Small UI polish */
           div[data-testid="stMetric"] {border: 1px solid rgba(49,51,63,0.12); border-radius: 12px; padding: 0.75rem;}
           .stButton>button {border-radius: 10px; padding: 0.55rem 0.8rem;}
           div[data-testid="stDataFrame"] {border-radius: 12px; overflow: hidden; border: 1px solid rgba(49,51,63,0.12);}
           div[data-testid="stExpander"] {border-radius: 12px; border: 1px solid rgba(49,51,63,0.10);}
-
-          /* Badges used in detail panel */
           .badge {display:inline-block; padding: 0.12rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700;}
           .badge-high {background:#d9f5ea; color:#0b6b46;}
           .badge-mid {background:#fff1cc; color:#7a5a00;}
@@ -65,6 +56,7 @@ def inject_styles() -> None:
         """,
         unsafe_allow_html=True,
     )
+
 
 def safe_json_loads(value: Any, default: Any) -> Any:
     if value is None:
@@ -127,7 +119,12 @@ def confidence_badge_html(value: Any) -> str:
 
 def git_commit_hash() -> str:
     try:
-        result = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=False)
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         if result.returncode == 0:
             return result.stdout.strip() or "unknown"
     except Exception:
@@ -203,7 +200,11 @@ def dashboard_stats(df: pd.DataFrame) -> Dict[str, Any]:
     covered = int(((df["category_final"].fillna("") != "") | (df["category_pred"].fillna("") != "")).sum())
     avg_conf = pd.to_numeric(df["confidence"], errors="coerce").mean()
     recon = reconciliation.summary_metrics(DB_PATH)
-    needs_review = recon.get("low_confidence_queue_size", 0) + recon.get("conflicts_queue_size", 0) + max(receipts - matched_receipts, 0)
+    needs_review = (
+        recon.get("low_confidence_queue_size", 0)
+        + recon.get("conflicts_queue_size", 0)
+        + max(receipts - matched_receipts, 0)
+    )
     return {
         "total_records": len(df),
         "receipts": receipts,
@@ -225,6 +226,24 @@ def label_source_for_record(rec: Dict[str, Any]) -> str:
         if raw.get("ml_prediction") or raw.get("model_pred"):
             return "ml"
     return "rules"
+
+
+def effective_category_for_row(rec: Dict[str, Any]) -> str:
+    return (
+        taxonomy.normalize_category_name(rec.get("category_final"))
+        or taxonomy.normalize_category_name(rec.get("category_pred"))
+        or "Uncategorized"
+    )
+
+
+def reason_source_for_row(rec: Dict[str, Any]) -> str:
+    raw = rec.get("raw_payload") if isinstance(rec.get("raw_payload"), dict) else {}
+    reasons = raw.get("rule_reason") if isinstance(raw, dict) else None
+    if isinstance(reasons, list) and reasons:
+        return str(reasons[0])
+    if isinstance(raw, dict) and raw.get("ml_prediction"):
+        return "ml_prediction"
+    return label_source_for_record(rec)
 
 
 def build_review_queue_df(all_df: pd.DataFrame) -> pd.DataFrame:
@@ -259,14 +278,15 @@ def build_review_queue_df(all_df: pd.DataFrame) -> pd.DataFrame:
                 "source": row.get("source"),
                 "predicted_category": row.get("category_pred"),
                 "final_category": row.get("category_final"),
-                "effective_category": taxonomy.normalize_category_name(row.get("category_final"))
-                or taxonomy.normalize_category_name(row.get("category_pred"))
-                or "Uncategorized",
+                "effective_category": effective_category_for_row(row),
                 "confidence": row.get("confidence"),
                 "issue_type": issue,
                 "rules_pred": conflicts.get(rid, {}).get("rules_pred"),
-                "ml_pred": conflicts.get(rid, {}).get("ml_pred") or (raw_payload.get("ml_prediction") if isinstance(raw_payload, dict) else None),
-                "label_source": label_source_for_record({"category_final": row.get("category_final"), "raw_payload": raw_payload}),
+                "ml_pred": conflicts.get(rid, {}).get("ml_pred")
+                or (raw_payload.get("ml_prediction") if isinstance(raw_payload, dict) else None),
+                "label_source": label_source_for_record(
+                    {"category_final": row.get("category_final"), "raw_payload": raw_payload}
+                ),
             }
         )
     q = pd.DataFrame(rows)
@@ -275,17 +295,130 @@ def build_review_queue_df(all_df: pd.DataFrame) -> pd.DataFrame:
     return q
 
 
+def build_review_grid_df(all_df: pd.DataFrame) -> pd.DataFrame:
+    if all_df.empty:
+        return pd.DataFrame()
+    rows = []
+    for _, row in all_df.iterrows():
+        rec = parse_record_fields(row.to_dict())
+        rows.append(
+            {
+                "id": rec.get("id"),
+                "date": rec.get("transaction_date"),
+                "merchant_raw": rec.get("merchant_raw"),
+                "merchant_normalized": rec.get("merchant_norm"),
+                "amount": rec.get("amount"),
+                "source": rec.get("source"),
+                "predicted_category": taxonomy.normalize_category_name(rec.get("category_pred")) or "Uncategorized",
+                "confidence": rec.get("confidence"),
+                "reason_source": reason_source_for_row(rec),
+                "final_category": effective_category_for_row(rec),
+                "approved": bool(rec.get("category_final")),
+                "unknown_merchant": not bool(str(rec.get("merchant_norm") or "").strip()),
+                "missing_fields": any(not rec.get(key) for key in ("transaction_date", "merchant_raw", "amount")),
+            }
+        )
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        df = df.sort_values(by=["date", "merchant_raw"], ascending=[False, True], na_position="last")
+    return df
+
+
 def category_options() -> List[str]:
     options = taxonomy.load_sourcetax_categories(include_uncategorized=False)
-    # UI-only placeholder; never persisted as final label.
     return ["Uncategorized"] + options if options else ["Uncategorized"]
+
+
+def detect_uploaded_source(filename: str, raw_bytes: bytes) -> str:
+    suffix = Path(filename).suffix.lower()
+    if suffix in {".png", ".jpg", ".jpeg", ".pdf"}:
+        return "receipt"
+    if suffix != ".csv":
+        raise ValueError(f"Unsupported file type: {suffix}")
+    text = raw_bytes.decode("utf-8-sig")
+    reader = csv.DictReader(text.splitlines())
+    headers = {str(x or "").strip().lower() for x in (reader.fieldnames or [])}
+    if {"order_id", "location", "total"}.issubset(headers):
+        return "toast"
+    if {"date", "description", "amount"}.issubset(headers):
+        return "bank"
+    if {"date", "amount"}.issubset(headers) and ("payee" in headers or "description" in headers):
+        return "quickbooks"
+    if {"merchant", "date", "total"}.issubset(headers):
+        return "receipt"
+    raise ValueError("Could not detect source from headers.")
+
+
+def save_uploaded_file(uploaded_file) -> Path:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    safe_name = Path(uploaded_file.name).name
+    target = UPLOAD_DIR / f"{timestamp}_{safe_name}"
+    target.write_bytes(uploaded_file.getvalue())
+    return target
+
+
+def process_uploaded_files(uploaded_files: List[Any]) -> List[Dict[str, Any]]:
+    results: List[Dict[str, Any]] = []
+    for uploaded_file in uploaded_files:
+        raw_bytes = uploaded_file.getvalue()
+        row = {
+            "file_name": uploaded_file.name,
+            "source_detected": "",
+            "rows_found": 0,
+            "parsed_ok": 0,
+            "parsed_failed": 0,
+            "status": "ok",
+            "notes": "",
+        }
+        try:
+            source = detect_uploaded_source(uploaded_file.name, raw_bytes)
+            row["source_detected"] = source
+            saved_path = save_uploaded_file(uploaded_file)
+            if source == "receipt":
+                ok = ingest.ingest_receipt_file(saved_path, db_path=DB_PATH)
+                row["rows_found"] = 1
+                row["parsed_ok"] = 1 if ok else 0
+                row["parsed_failed"] = 0 if ok else 1
+                row["notes"] = "Receipt OCR parsed" if ok else "Receipt parse failed"
+            else:
+                text = raw_bytes.decode("utf-8-sig")
+                row_count = max(sum(1 for _ in csv.DictReader(text.splitlines())), 0)
+                inserted = ingest.ingest_and_store(str(saved_path), source, db_path=DB_PATH)
+                row["rows_found"] = row_count
+                row["parsed_ok"] = inserted
+                row["parsed_failed"] = max(row_count - inserted, 0)
+                row["notes"] = f"Ingested {inserted} rows"
+        except Exception as exc:
+            row["status"] = "error"
+            row["parsed_failed"] = row["rows_found"] or 1
+            row["notes"] = str(exc)
+        results.append(row)
+    return results
+
+
+def run_processing_pipeline() -> Dict[str, int]:
+    matched = matching.match_all_receipts(DB_PATH)
+    categorized = categorization.categorize_all_records(DB_PATH)
+    return {"matched_receipts": int(matched), "categorized_records": int(categorized)}
+
+
+def save_category_override(record_id: str, category: str, notes: str = "Saved from review grid") -> None:
+    to_save = "Other Expense" if category == "Uncategorized" else category
+    categorization.save_category_override(
+        record_id,
+        to_save,
+        DB_PATH,
+        label_confidence="medium",
+        label_notes=notes,
+    )
 
 
 def render_header() -> None:
     meta = get_run_metadata()
     st.markdown("<div class='app-title'>SourceTax</div>", unsafe_allow_html=True)
     st.markdown(
-        "<div class='app-sub'>Transaction classification • matching • reconciliation • accounting exports</div>",
+        "<div class='app-sub'>Upload data, review categories, resolve exceptions, export accounting outputs.</div>",
         unsafe_allow_html=True,
     )
     with st.expander("Run metadata"):
@@ -293,94 +426,10 @@ def render_header() -> None:
         st.write(f"Commit: `{meta['commit']}`")
         st.write(f"Timestamp: `{meta['timestamp']}`")
 
-def run_pipeline_actions() -> None:
-    c1, c2, c3 = st.columns([1, 1, 1.2])
-    with c1:
-        if st.button("Auto-match receipts", width="stretch"):
-            count = matching.match_all_receipts(DB_PATH)
-            st.success(f"Matched {count} receipts.")
-            st.rerun()
-    with c2:
-        if st.button("Auto-categorize", width="stretch"):
-            count = categorization.categorize_all_records(DB_PATH)
-            st.success(f"Categorized {count} records.")
-            st.rerun()
-    with c3:
-        if st.button("Export gold labels", width="stretch"):
-            result = exporter.export_gold_transactions_jsonl(DB_PATH, GOLD_PATH, append=True)
-            st.success(f"Exported {result['exported']} labels. Gold total: {result['total_after']}")
-
-
-def render_dashboard(all_df: pd.DataFrame) -> None:
-    st.header("Dashboard")
-    stats = dashboard_stats(all_df)
-    recon_summary = reconciliation.summary_metrics(DB_PATH)
-
-    with st.container(border=True):
-        run_pipeline_actions()
-
-    cols = st.columns(6)
-    cols[0].metric("Total transactions", stats["total_records"])
-    cols[1].metric("Receipts", stats["receipts"])
-    cols[2].metric("Match rate", fmt_pct(stats["match_rate"]))
-    cols[3].metric("Categorized", fmt_pct(stats["categorization_coverage"]))
-    cols[4].metric("Avg confidence", fmt_pct(stats["avg_confidence"]) if stats["avg_confidence"] is not None else "-")
-    cols[5].metric("Needs review", stats["needs_review"])
-
-    c1, c2 = st.columns([1.25, 1.0])
-    with c1:
-        with st.container(border=True):
-            st.subheader("Spend by Category")
-            if all_df.empty:
-                st.info("No records loaded.")
-            else:
-                df = all_df.copy()
-                df["effective_category"] = df["category_final"].fillna("").replace("", pd.NA).fillna(df["category_pred"]).fillna("Uncategorized")
-                df["amount_num"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0.0)
-                expenses = df[df["direction"] == "expense"]
-                if expenses.empty:
-                    st.info("No expense rows yet.")
-                else:
-                    spend = (
-                        expenses.groupby("effective_category")["amount_num"]
-                        .sum()
-                        .sort_values(ascending=False)
-                        .reset_index()
-                        .rename(columns={"effective_category": "Category", "amount_num": "Spend"})
-                    )
-                    top = spend.head(10).copy()
-                    st.dataframe(
-                        top,
-                        hide_index=True,
-                        use_container_width=True,
-                        column_config={
-                            "Spend": st.column_config.NumberColumn("Spend", format="$%.2f"),
-                        },
-                        height=300,
-                    )
-                    st.bar_chart(top.set_index("Category")["Spend"])
-    with c2:
-        with st.container(border=True):
-            st.subheader("Review Queue Breakdown")
-            breakdown = pd.DataFrame(
-                [
-                    ("Unmatched Receipts", len(reconciliation.unmatched_receipts(DB_PATH))),
-                    ("Unmatched Bank Txns", len(reconciliation.unmatched_bank_transactions(DB_PATH))),
-                    ("Low Confidence", int(recon_summary.get("low_confidence_queue_size", 0) or 0)),
-                    ("Conflicts", int(recon_summary.get("conflicts_queue_size", 0) or 0)),
-                ],
-                columns=["Issue", "Count"],
-            ).sort_values("Count", ascending=False)
-            st.dataframe(breakdown, hide_index=True, use_container_width=True, height=220)
-            st.bar_chart(breakdown.set_index("Issue")["Count"])
-            st.markdown("**Next actions**")
-            st.write(f"- Review **{int(breakdown[breakdown['Issue']=='Low Confidence']['Count'].iloc[0]) if (breakdown['Issue']=='Low Confidence').any() else 0}** low-confidence items")
-            st.write(f"- Resolve **{int(breakdown[breakdown['Issue']=='Conflicts']['Count'].iloc[0]) if (breakdown['Issue']=='Conflicts').any() else 0}** conflicts")
-            st.write("- Generate accounting exports")
 
 def render_record_detail_panel(record: Dict[str, Any], queue_row: Optional[Dict[str, Any]] = None) -> None:
     rec = parse_record_fields(record)
-    c1, c2 = st.columns([1.05, 1.2])
+    c1, c2 = st.columns([1.0, 1.15])
     with c1:
         with st.container(border=True):
             st.subheader("Transaction")
@@ -389,271 +438,260 @@ def render_record_detail_panel(record: Dict[str, Any], queue_row: Optional[Dict[
             st.write(f"Normalized: `{rec.get('merchant_norm') or '-'}`")
             st.write(f"Amount: {fmt_money(rec.get('amount'))}")
             st.write(f"Source: `{rec.get('source') or '-'}`")
-            st.markdown(confidence_badge_html(rec.get('confidence')), unsafe_allow_html=True)
-            current = (
-                taxonomy.normalize_category_name(rec.get("category_final"))
-                or taxonomy.normalize_category_name(rec.get("category_pred"))
-                or "Uncategorized"
-            )
-            st.write(f"Category: **{current}**")
-            st.write(f"Label source: `{label_source_for_record(rec)}`")
-            if rec.get('matched_transaction_id'):
-                st.write(f"Matched: `{rec.get('matched_transaction_id')}` ({fmt_pct(rec.get('match_score'))})")
+            st.markdown(confidence_badge_html(rec.get("confidence")), unsafe_allow_html=True)
+            st.write(f"Predicted: **{taxonomy.normalize_category_name(rec.get('category_pred')) or 'Uncategorized'}**")
+            st.write(f"Final: **{effective_category_for_row(rec)}**")
+            st.write(f"Reason / source: `{reason_source_for_row(rec)}`")
+            if rec.get("matched_transaction_id"):
+                st.write(
+                    f"Matched: `{rec.get('matched_transaction_id')}` ({fmt_pct(rec.get('match_score'))})"
+                )
     with c2:
         with st.container(border=True):
-            st.subheader("Evidence / Details")
+            st.subheader("Evidence")
             for ev in (rec.get("evidence_keys") or [])[:10]:
                 st.write(f"- `{ev}`")
             raw_payload = rec.get("raw_payload") or {}
             if isinstance(raw_payload, dict):
-                ocr = raw_payload.get("ocr_text")
-                if ocr:
-                    st.text_area("Receipt excerpt", str(ocr)[:800], height=160, disabled=True)
+                if raw_payload.get("ocr_text"):
+                    st.text_area(
+                        "Receipt excerpt",
+                        str(raw_payload.get("ocr_text"))[:800],
+                        height=180,
+                        disabled=True,
+                    )
                 if queue_row and queue_row.get("issue_type") == "conflict":
                     st.write(f"Rules prediction: `{queue_row.get('rules_pred') or '-'}`")
                     st.write(f"ML prediction: `{queue_row.get('ml_pred') or '-'}`")
-                top3 = raw_payload.get("top3_predictions")
-                if isinstance(top3, list) and top3:
-                    st.write("Top predictions:")
-                    for item in top3[:3]:
-                        if isinstance(item, dict):
-                            st.write(f"- {item.get('category', '?')}: {fmt_pct(item.get('prob'))}")
+
+
+def render_ingest_screen(all_df: pd.DataFrame) -> None:
+    st.header("Upload / Ingest")
+    stats = dashboard_stats(all_df)
+    top = st.columns(4)
+    top[0].metric("Rows in workspace", stats["total_records"])
+    top[1].metric("Receipts", stats["receipts"])
+    top[2].metric("Matched receipts", stats["matched_receipts"])
+    top[3].metric("Needs review", stats["needs_review"])
 
     with st.container(border=True):
-        st.subheader("Review Action")
-        options = category_options()
-        current = (
-            taxonomy.normalize_category_name(rec.get("category_final"))
-            or taxonomy.normalize_category_name(rec.get("category_pred"))
-            or "Uncategorized"
+        st.subheader("Add files")
+        uploaded_files = st.file_uploader(
+            "Drop bank CSVs, card exports, receipt files, or POS exports",
+            type=["csv", "png", "jpg", "jpeg", "pdf"],
+            accept_multiple_files=True,
         )
-        idx = options.index(current) if current in options else 0
-        x1, x2, x3 = st.columns([2.2, 1.1, 1.1])
-        with x1:
-            override = st.selectbox("Override category", options, index=idx, key=f"override_{rec.get('id')}")
-        confidence_key = f"label_confidence_{rec.get('id')}"
-        notes_key = f"label_notes_{rec.get('id')}"
-        default_conf = str((rec.get("raw_payload") or {}).get("label_confidence") or "medium").strip().lower()
-        if default_conf not in {"high", "medium", "low"}:
-            default_conf = "medium"
-        label_confidence = st.selectbox(
-            "Label confidence",
-            ["high", "medium", "low"],
-            index=["high", "medium", "low"].index(default_conf),
-            key=confidence_key,
-        )
-        label_notes = st.text_area(
-            "Label notes (optional)",
-            value=str((rec.get("raw_payload") or {}).get("label_notes") or ""),
-            key=notes_key,
-            height=80,
-            placeholder="Why this label? Add ambiguity/context if needed.",
-        )
-        with x2:
-            if st.button("Approve", key=f"approve_{rec.get('id')}", width="stretch"):
-                try:
-                    to_save = "Other Expense" if current == "Uncategorized" else current
-                    categorization.save_category_override(
-                        rec["id"],
-                        to_save,
-                        DB_PATH,
-                        label_confidence=label_confidence,
-                        label_notes=label_notes,
-                    )
-                    st.success(f"Saved category: {to_save}")
-                    st.rerun()
-                except ValueError as exc:
-                    st.error(str(exc))
-        with x3:
-            if st.button("Save", key=f"save_{rec.get('id')}", width="stretch"):
-                try:
-                    to_save = "Other Expense" if override == "Uncategorized" else override
-                    categorization.save_category_override(
-                        rec["id"],
-                        to_save,
-                        DB_PATH,
-                        label_confidence=label_confidence,
-                        label_notes=label_notes,
-                    )
-                    st.success(f"Saved category: {to_save}")
-                    st.rerun()
-                except ValueError as exc:
-                    st.error(str(exc))
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("Ingest uploaded files", use_container_width=True, disabled=not uploaded_files):
+                results = process_uploaded_files(list(uploaded_files or []))
+                st.session_state["ingest_results"] = results
+                st.success(f"Processed {len(results)} file(s).")
+                st.rerun()
+        with c2:
+            if st.button("Run matching + categorization", use_container_width=True):
+                result = run_processing_pipeline()
+                st.success(
+                    f"Matched {result['matched_receipts']} receipts and categorized {result['categorized_records']} records."
+                )
+                st.rerun()
+
+    with st.container(border=True):
+        st.subheader("Ingest summary")
+        ingest_results = st.session_state.get("ingest_results", [])
+        if ingest_results:
+            summary_df = pd.DataFrame(ingest_results)
+            st.dataframe(summary_df, use_container_width=True, hide_index=True)
+            sources = sorted({row["source_detected"] for row in ingest_results if row.get("source_detected")})
+            st.write(f"Sources detected: `{', '.join(sources) if sources else '-'}`")
+        else:
+            st.info("No uploads processed yet.")
 
 
-def render_review_queue(all_df: pd.DataFrame) -> None:
-    st.header("Review Queue")
-    q = build_review_queue_df(all_df)
-    if q.empty:
-        st.success("No review queue items.")
+def render_review_grid(all_df: pd.DataFrame) -> None:
+    st.header("Review Grid")
+    grid_df = build_review_grid_df(all_df)
+    if grid_df.empty:
+        st.info("No records loaded yet. Upload files on the ingest screen first.")
         return
 
     with st.container(border=True):
-        f1, f2, f3, f4 = st.columns([1.2, 1.2, 1.5, 2.2])
-        issue_options = ["all"] + sorted(q["issue_type"].dropna().unique().tolist())
-        cat_options = ["all"] + sorted(q["effective_category"].fillna("Uncategorized").unique().tolist())
-        issue_filter = f1.selectbox("Issue type", issue_options)
-        category_filter = f2.selectbox("Category", cat_options)
-        conf_range = f3.slider("Confidence", 0.0, 1.0, (0.0, 1.0), step=0.05)
-        merchant_search = f4.text_input("Merchant search", placeholder="Starbucks, Uber, Amazon…")
+        f1, f2, f3, f4, f5 = st.columns([1.0, 1.0, 1.0, 1.0, 1.8])
+        low_conf_only = f1.checkbox("Low confidence only")
+        unknown_only = f2.checkbox("Unknown merchant")
+        unapproved_only = f3.checkbox("Unapproved only")
+        source_options = sorted(grid_df["source"].dropna().unique().tolist())
+        selected_sources = f4.multiselect("Source", source_options, default=source_options)
+        search_term = f5.text_input("Search merchant", placeholder="Starbucks, Uber, Amazon...")
 
-    qf = q.copy()
-    qf["confidence_num"] = pd.to_numeric(qf["confidence"], errors="coerce")
-    if issue_filter != "all":
-        qf = qf[qf["issue_type"] == issue_filter]
-    if category_filter != "all":
-        qf = qf[qf["effective_category"] == category_filter]
-    qf = qf[(qf["confidence_num"].fillna(-1).between(conf_range[0], conf_range[1])) | (qf["confidence_num"].isna())]
-    if merchant_search.strip():
-        term = merchant_search.strip().lower()
-        qf = qf[
-            qf["merchant_raw"].fillna("").str.lower().str.contains(term)
-            | qf["merchant_norm"].fillna("").str.lower().str.contains(term)
+    filtered = grid_df.copy()
+    filtered["confidence_num"] = pd.to_numeric(filtered["confidence"], errors="coerce")
+    if low_conf_only:
+        filtered = filtered[filtered["confidence_num"].fillna(0.0) < 0.70]
+    if unknown_only:
+        filtered = filtered[filtered["unknown_merchant"]]
+    if unapproved_only:
+        filtered = filtered[~filtered["approved"]]
+    if selected_sources:
+        filtered = filtered[filtered["source"].isin(selected_sources)]
+    if search_term.strip():
+        term = search_term.strip().lower()
+        filtered = filtered[
+            filtered["merchant_raw"].fillna("").str.lower().str.contains(term)
+            | filtered["merchant_normalized"].fillna("").str.lower().str.contains(term)
         ]
 
-    if qf.empty:
-        st.info("No items match the current filters.")
+    if filtered.empty:
+        st.info("No rows match the current review filters.")
         return
 
-    def _short_id(x: Any) -> str:
-        s = str(x or "")
-        return s[:8] if s else ""
+    action_cols = st.columns([1.2, 1.2, 2.4])
+    with action_cols[0]:
+        if st.button("Bulk approve high-confidence", use_container_width=True):
+            candidates = filtered[(filtered["confidence_num"].fillna(0.0) >= 0.85) & (~filtered["approved"])]
+            saved = 0
+            for _, row in candidates.iterrows():
+                save_category_override(str(row["id"]), str(row["predicted_category"]), notes="Bulk-approved from review grid")
+                saved += 1
+            st.success(f"Approved {saved} high-confidence rows.")
+            st.rerun()
+    with action_cols[1]:
+        if st.button("Export reviewed labels", use_container_width=True):
+            result = exporter.export_gold_transactions_jsonl(DB_PATH, GOLD_PATH, append=True)
+            st.success(f"Exported {result['exported']} labels. Gold total: {result['total_after']}")
+    with action_cols[2]:
+        st.caption("This is the main work surface: edit final category inline, tick approve, then save.")
 
-    left, right = st.columns([1.35, 1.0])
-    with left:
-        with st.container(border=True):
-            st.subheader(f"Queue ({len(qf)} items)")
+    editor_df = filtered[
+        [
+            "id",
+            "date",
+            "merchant_raw",
+            "merchant_normalized",
+            "amount",
+            "predicted_category",
+            "confidence",
+            "reason_source",
+            "final_category",
+        ]
+    ].copy()
+    editor_df["approve"] = False
+    original_final_categories = dict(zip(editor_df["id"].astype(str), editor_df["final_category"].astype(str)))
 
-            display = qf[["id", "transaction_date", "merchant_raw", "amount", "effective_category", "confidence_num", "issue_type"]].copy()
-            display["id"] = display["id"].map(_short_id)
-            display.rename(
-                columns={
-                    "id": "ID",
-                    "transaction_date": "Date",
-                    "merchant_raw": "Merchant",
-                    "amount": "Amount",
-                    "effective_category": "Category",
-                    "confidence_num": "Confidence",
-                    "issue_type": "Issue",
-                },
-                inplace=True,
-            )
-
-            st.dataframe(
-                display,
-                hide_index=True,
-                use_container_width=True,
-                height=420,
-                column_config={
-                    "Confidence": st.column_config.ProgressColumn("Confidence", min_value=0.0, max_value=1.0, format="%.0f%%"),
-                    "Amount": st.column_config.NumberColumn("Amount", format="$%.2f"),
-                    "Date": st.column_config.DateColumn("Date"),
-                    "Issue": st.column_config.TextColumn("Issue", help="Why this row needs review"),
-                },
-            )
-
-            # Selection (human-friendly labels instead of UUID soup)
-            labels = (
-                qf["transaction_date"].fillna("").astype(str)
-                + " • "
-                + qf["merchant_raw"].fillna("Unknown merchant").astype(str).str.slice(0, 40)
-                + " • "
-                + qf["amount"].fillna("").astype(str)
-            ).tolist()
-            idx = st.radio(
-                "Open item",
-                options=list(range(len(labels))),
-                format_func=lambda i: labels[i],
-                key="review_select_idx",
-            )
-            selected_id = qf.iloc[idx]["id"]
-
-    with right:
-        if selected_id:
-            rec = fetch_record(selected_id)
-            row = qf[qf["id"] == selected_id].iloc[0].to_dict()
-            if rec:
-                render_record_detail_panel(rec, queue_row=row)
-
-def match_candidates_for_receipt(receipt: Dict[str, Any], top_k: int = 5) -> pd.DataFrame:
-    candidates = query_rows(
-        """
-        SELECT id, source, transaction_date, merchant_raw, amount
-        FROM canonical_records
-        WHERE source IN ('bank','toast','quickbooks')
-        """
+    edited = st.data_editor(
+        editor_df,
+        use_container_width=True,
+        hide_index=True,
+        num_rows="fixed",
+        column_config={
+            "id": st.column_config.TextColumn("ID"),
+            "date": st.column_config.TextColumn("Date"),
+            "amount": st.column_config.NumberColumn("Amount", format="$%.2f"),
+            "confidence": st.column_config.ProgressColumn(
+                "Confidence",
+                min_value=0.0,
+                max_value=1.0,
+                format="%.0f%%",
+            ),
+            "final_category": st.column_config.SelectboxColumn(
+                "Final Category",
+                options=category_options(),
+                required=True,
+            ),
+            "approve": st.column_config.CheckboxColumn("Approve"),
+        },
+        key="review_grid_editor",
     )
-    rows = []
-    for cand in candidates:
-        d = matching.date_closeness_score(receipt.get("transaction_date"), cand.get("transaction_date"), max_days=3)
-        a = matching.amount_closeness_score(receipt.get("amount"), cand.get("amount"), tolerance=10.0)
-        m = matching.merchant_similarity_score(receipt.get("merchant_raw"), cand.get("merchant_raw"), min_ratio=0.7)
-        score = d * 0.3 + a * 0.5 + m * 0.2
-        rows.append({
-            "candidate_id": cand.get("id"),
-            "source": cand.get("source"),
-            "transaction_date": cand.get("transaction_date"),
-            "merchant_raw": cand.get("merchant_raw"),
-            "amount": cand.get("amount"),
-            "score": score,
-            "amount_score": a,
-            "date_score": d,
-            "merchant_score": m,
-            "strength": "strong" if score >= 0.85 else ("medium" if score >= 0.65 else "weak"),
-        })
-    df = pd.DataFrame(rows)
-    if df.empty:
-        return df
-    return df.sort_values("score", ascending=False).head(top_k)
+
+    if st.button("Save grid changes", use_container_width=True):
+        saved = 0
+        for _, row in edited.iterrows():
+            changed = str(row.get("final_category")) != original_final_categories.get(str(row.get("id")), "")
+            if bool(row.get("approve")) or changed:
+                save_category_override(str(row["id"]), str(row["final_category"]))
+                saved += 1
+        st.success(f"Saved {saved} approval(s).")
+        st.rerun()
+
+    detail_choices = filtered["id"].astype(str).tolist()
+    detail_labels = {}
+    for _, row in filtered.iterrows():
+        rid = str(row.get("id"))
+        merchant = str(row.get("merchant_raw") or "Unknown merchant")
+        detail_labels[rid] = f"{rid} • {merchant}"
+    detail_id = st.selectbox(
+        "Open row details",
+        detail_choices,
+        format_func=lambda rid: detail_labels.get(str(rid), str(rid)),
+        key="review_detail_id",
+    )
+    if detail_id:
+        record = fetch_record(str(detail_id))
+        if record:
+            render_record_detail_panel(record)
 
 
-def link_receipt(receipt_id: str, transaction_id: str, score: float) -> None:
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("UPDATE canonical_records SET matched_transaction_id = ?, match_score = ? WHERE id = ?", (transaction_id, float(score), receipt_id))
-    conn.commit()
-    conn.close()
+def render_exceptions_screen(all_df: pd.DataFrame) -> None:
+    st.header("Exceptions / Review Queue")
+    queue_df = build_review_queue_df(all_df)
+    grid_df = build_review_grid_df(all_df)
 
+    low_conf = queue_df[queue_df["issue_type"] == "low_confidence"].copy() if not queue_df.empty else pd.DataFrame()
+    conflicts = queue_df[queue_df["issue_type"] == "conflict"].copy() if not queue_df.empty else pd.DataFrame()
+    unmatched_receipts = pd.DataFrame(reconciliation.unmatched_receipts(DB_PATH))
+    ambiguous_merchants = grid_df[grid_df["unknown_merchant"]].copy() if not grid_df.empty else pd.DataFrame()
+    missing_fields = grid_df[grid_df["missing_fields"]].copy() if not grid_df.empty else pd.DataFrame()
 
-def render_matching_page() -> None:
-    st.header("Matching")
-    receipts = pd.DataFrame(reconciliation.unmatched_receipts(DB_PATH))
-    if receipts.empty:
-        st.success("No unmatched receipts.")
-        return
+    stats = st.columns(5)
+    stats[0].metric("Low confidence", len(low_conf))
+    stats[1].metric("Conflicts", len(conflicts))
+    stats[2].metric("Unmatched receipts", len(unmatched_receipts))
+    stats[3].metric("Ambiguous merchants", len(ambiguous_merchants))
+    stats[4].metric("Missing fields", len(missing_fields))
 
-    left, right = st.columns([1.0, 1.3])
-    with left:
-        with st.container(border=True):
-            st.subheader("Unmatched Receipts")
-            st.dataframe(receipts[["id", "transaction_date", "merchant_raw", "amount"]], width="stretch", hide_index=True)
-            selected_receipt_id = st.selectbox("Select receipt", receipts["id"].tolist(), key="matching_receipt")
-    with right:
-        receipt = fetch_record(selected_receipt_id) if selected_receipt_id else None
-        if not receipt:
-            return
-        with st.container(border=True):
-            st.subheader("Suggested Matches")
-            st.write(f"Receipt: **{receipt.get('merchant_raw', '-') }** | {fmt_money(receipt.get('amount'))} | `{receipt.get('transaction_date', '-')}`")
-            cand_df = match_candidates_for_receipt(receipt, top_k=5)
-            if cand_df.empty:
-                st.info("No candidates found.")
-                return
-            st.dataframe(cand_df, width="stretch", hide_index=True)
-            cand_ids = [str(x) if x is not None else "(missing-id)" for x in cand_df["candidate_id"].tolist()]
-            selected = st.selectbox("Candidate to link", cand_ids)
-            sel_row = cand_df.iloc[cand_ids.index(selected)]
-            st.write("Score breakdown")
-            st.progress(float(sel_row["score"]))
-            b1, b2, b3 = st.columns(3)
-            b1.metric("Amount score", fmt_pct(sel_row["amount_score"]))
-            b2.metric("Date score", fmt_pct(sel_row["date_score"]))
-            b3.metric("Merchant score", fmt_pct(sel_row["merchant_score"]))
-            st.write(f"Strength: `{sel_row['strength']}`")
-            if selected != "(missing-id)" and st.button("Link selected match", width="stretch"):
-                link_receipt(receipt["id"], selected, float(sel_row["score"]))
-                st.success(f"Linked receipt {receipt['id']} to transaction {selected}")
-                st.rerun()
+    tabs = st.tabs(
+        [
+            "Low Confidence",
+            "Conflicts",
+            "Unmatched Receipts",
+            "Ambiguous Merchants",
+            "Missing Fields",
+        ]
+    )
+
+    with tabs[0]:
+        if low_conf.empty:
+            st.success("No low-confidence rows.")
+        else:
+            st.dataframe(low_conf, use_container_width=True, hide_index=True)
+    with tabs[1]:
+        if conflicts.empty:
+            st.success("No conflicts right now.")
+        else:
+            st.dataframe(conflicts, use_container_width=True, hide_index=True)
+    with tabs[2]:
+        if unmatched_receipts.empty:
+            st.success("No unmatched receipts.")
+        else:
+            st.dataframe(unmatched_receipts, use_container_width=True, hide_index=True)
+    with tabs[3]:
+        if ambiguous_merchants.empty:
+            st.success("No ambiguous merchants.")
+        else:
+            st.dataframe(
+                ambiguous_merchants[["id", "date", "merchant_raw", "amount", "source"]],
+                use_container_width=True,
+                hide_index=True,
+            )
+    with tabs[4]:
+        if missing_fields.empty:
+            st.success("No rows with missing required fields.")
+        else:
+            st.dataframe(
+                missing_fields[["id", "date", "merchant_raw", "amount", "source"]],
+                use_container_width=True,
+                hide_index=True,
+            )
 
 
 @dataclass
@@ -691,16 +729,18 @@ def render_export_card(card: ExportCard) -> None:
         row_count = count_file_rows(card.path)
         if row_count is not None:
             st.write(f"Rows: {row_count}")
-        st.write(f"Updated: {datetime.fromtimestamp(card.path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')}")
+        st.write(
+            f"Updated: {datetime.fromtimestamp(card.path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         try:
             data = card.path.read_bytes()
-            st.download_button("Download", data=data, file_name=card.path.name, width="stretch")
+            st.download_button("Download", data=data, file_name=card.path.name, use_container_width=True)
         except Exception:
             pass
         with st.expander("Preview"):
             try:
                 if card.path.suffix.lower() == ".csv":
-                    st.dataframe(pd.read_csv(card.path).head(10), width="stretch", hide_index=True)
+                    st.dataframe(pd.read_csv(card.path).head(10), use_container_width=True, hide_index=True)
                 elif card.path.suffix.lower() == ".jsonl":
                     rows = []
                     with card.path.open(encoding="utf-8") as fh:
@@ -708,104 +748,46 @@ def render_export_card(card: ExportCard) -> None:
                             if line.strip():
                                 rows.append(json.loads(line))
                     st.json(rows)
-            except Exception as e:
-                st.warning(f"Preview failed: {e}")
+            except Exception as exc:
+                st.warning(f"Preview failed: {exc}")
 
 
 def render_exports_page() -> None:
-    st.header("Exports")
+    st.header("Export")
     with st.container(border=True):
         st.subheader("Generate outputs")
-        x1, x2, x3 = st.columns(3)
-        with x1:
-            if st.button("Generate basic exports", width="stretch"):
-                qb = exporter.generate_quickbooks_csv(db_path=DB_PATH)
-                totals, counts = exporter.compute_schedule_c_totals(DB_PATH)
-                exporter.write_schedule_c_csv(totals, counts)
-                exporter.export_audit_pack(DB_PATH)
-                st.success(f"Generated {qb} and related basic exports.")
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("Generate export bundle", use_container_width=True):
+                bundle = exporter.export_accounting_grade_bundle(DB_PATH, out_dir="outputs")
+                exporter.generate_quickbooks_csv(out_path="outputs/quickbooks_import.csv", db_path=DB_PATH)
+                st.success(f"Generated export bundle `{bundle['run_id']}`.")
                 st.rerun()
-        with x2:
-            if st.button("Generate accounting-grade bundle", width="stretch"):
-                result = exporter.export_accounting_grade_bundle(DB_PATH, out_dir="outputs")
+        with c2:
+            if st.button("Generate reconciliation queue", use_container_width=True):
                 reconciliation.export_reconciliation_reports(DB_PATH, out_dir="outputs/reconciliation")
-                st.success(f"Generated accounting-grade bundle (run_id={result['run_id']}).")
-                st.rerun()
-        with x3:
-            if st.button("Generate reconciliation reports", width="stretch"):
-                reconciliation.export_reconciliation_reports(DB_PATH, out_dir="outputs/reconciliation")
-                st.success("Generated reconciliation queue CSVs and summary metrics.")
+                st.success("Generated reconciliation queue files.")
                 st.rerun()
 
     cards = [
-        ExportCard("QuickBooks import CSV", Path("outputs/quickbooks_import.csv")),
-        ExportCard("Schedule C totals CSV", Path("outputs/schedule_c_totals.csv")),
-        ExportCard("Audit pack CSV", Path("outputs/audit_pack.csv")),
+        ExportCard("Enriched transactions CSV", Path("outputs/accounting_transactions_enriched.csv")),
         ExportCard("GL lines CSV", Path("outputs/gl_lines.csv")),
         ExportCard("Audit trail JSONL", Path("outputs/audit_trail.jsonl")),
-        ExportCard("Needs review CSV (benchmark)", Path("reports/phase3_eval_assets/needs_review.csv")),
-        ExportCard("Low confidence queue CSV", Path("outputs/reconciliation/low_confidence_categorizations.csv")),
+        ExportCard("QuickBooks-style CSV", Path("outputs/quickbooks_import.csv")),
     ]
-    cols = st.columns(3)
+    cols = st.columns(2)
     for i, card in enumerate(cards):
-        with cols[i % 3]:
+        with cols[i % 2]:
             render_export_card(card)
-
-
-def render_gold_page() -> None:
-    st.header("Gold Set (Labeling)")
-    gold_count = exporter.count_gold_records(GOLD_PATH)
-    st.progress(min(gold_count / GOLD_TARGET, 1.0))
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Gold labels", gold_count)
-    c2.metric("Target", GOLD_TARGET)
-    c3.metric("Remaining", max(GOLD_TARGET - gold_count, 0))
-
-    with st.container(border=True):
-        x1, x2 = st.columns(2)
-        with x1:
-            if st.button("Export reviewed labels to gold set", width="stretch"):
-                result = exporter.export_gold_transactions_jsonl(DB_PATH, GOLD_PATH, append=True)
-                st.success(f"Exported {result['exported']} labels. Gold total: {result['total_after']}")
-                st.rerun()
-        with x2:
-            st.info("For batch labeling: run the labeling UI in a separate terminal:\n\nstreamlit run tools/labeling_ui.py -- --input data/ml/selection_for_labeling.csv")
-
-    p = Path(GOLD_PATH)
-    with st.container(border=True):
-        st.subheader("Category Distribution")
-        if not p.exists():
-            st.info("Gold file not found.")
-            return
-        rows = []
-        with p.open(encoding="utf-8") as fh:
-            for line in fh:
-                if not line.strip():
-                    continue
-                try:
-                    rows.append(json.loads(line))
-                except Exception:
-                    continue
-        if not rows:
-            st.info("Gold file is empty.")
-            return
-        df = pd.DataFrame(rows)
-        cat_col = "category_final" if "category_final" in df.columns else ("category" if "category" in df.columns else None)
-        if not cat_col:
-            st.info("No category field found in gold file.")
-            return
-        counts = df[cat_col].fillna("Unlabeled").value_counts()
-        st.bar_chart(counts)
-        st.dataframe(counts.rename_axis("Category").reset_index(name="Count"), width="stretch", hide_index=True)
 
 
 def render_sidebar(queue_count: int) -> str:
     st.sidebar.title("SourceTax")
-    st.sidebar.caption("Review and export console")
-    st.sidebar.markdown(f"Queue items: **{queue_count}**")
+    st.sidebar.caption("Finance review console")
+    st.sidebar.markdown(f"Exceptions: **{queue_count}**")
     return st.sidebar.radio(
-        "Navigate",
-        ["Dashboard", "Review Queue", "Matching", "Exports", "Gold Set (Labeling)"],
+        "Workflow",
+        ["Upload / Ingest", "Review Grid", "Exceptions", "Export"],
     )
 
 
@@ -816,16 +798,14 @@ def main() -> None:
     queue_df = build_review_queue_df(all_df)
     page = render_sidebar(len(queue_df))
 
-    if page == "Dashboard":
-        render_dashboard(all_df)
-    elif page == "Review Queue":
-        render_review_queue(all_df)
-    elif page == "Matching":
-        render_matching_page()
-    elif page == "Exports":
+    if page == "Upload / Ingest":
+        render_ingest_screen(all_df)
+    elif page == "Review Grid":
+        render_review_grid(all_df)
+    elif page == "Exceptions":
+        render_exceptions_screen(all_df)
+    elif page == "Export":
         render_exports_page()
-    elif page == "Gold Set (Labeling)":
-        render_gold_page()
 
 
 if __name__ == "__main__":

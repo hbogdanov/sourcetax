@@ -67,6 +67,12 @@ Run the product demo:
 python run_pipeline.py --input data/samples/bank_sample.csv
 ```
 
+Launch the review UI:
+
+```bash
+streamlit run app_review.py
+```
+
 Run validation and smoke checks:
 
 ```bash
@@ -77,6 +83,12 @@ make smoke
 ```
 
 ## Core Commands
+
+UI workflow:
+
+```text
+Upload / Ingest -> Review Grid -> Exceptions -> Export
+```
 
 Evaluation:
 
