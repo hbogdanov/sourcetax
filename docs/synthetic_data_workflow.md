@@ -120,6 +120,51 @@ Recommended ablation sequence:
 
 Stop if larger synthetic mixes do not improve weak-category performance on the gold holdout.
 
+Experimental mixed-training command:
+
+```bash
+python tools/training/experimental_mixed_aux_train.py \
+  --gold data/gold/gold_transactions.jsonl \
+  --synthetic-jsonl data/ml/staging_training_rows_gapfill.jsonl \
+  --split-ids artifacts/reports/gold_ml_baseline_split_ids_20260330T185251Z.json \
+  --baseline-metrics artifacts/synthetic/gold_only_metrics.json \
+  --synthetic-ratio 0.20 \
+  --seed 42 \
+  --run-id mixed_aux_gapfill_20
+```
+
+Run the same command with `--synthetic-ratio 0.35` for the second ablation.
+
+## Current Experimental Outcome
+
+On the locked gold split saved in `artifacts/reports/gold_ml_baseline_split_ids_20260330T185251Z.json`:
+
+- gold-only ML macro-F1: `0.5777`
+- gold + synthetic at `20%`: `0.6179`
+- gold + synthetic at `35%`: `0.6119`
+
+Current recommendation:
+
+- prefer the `20%` mix over `35%`
+- keep the experiment marked as auxiliary and non-canonical
+- continue reporting final categorization metrics on the gold-only holdout
+
+Artifact references:
+
+- `artifacts/synthetic/gold_only_metrics.json`
+- `artifacts/synthetic/mixed_aux_gapfill_20_metrics.json`
+- `artifacts/synthetic/mixed_aux_gapfill_20_report.md`
+- `artifacts/synthetic/mixed_aux_gapfill_35_metrics.json`
+- `artifacts/synthetic/mixed_aux_gapfill_35_report.md`
+
+Weak-category notes from this run:
+
+- `Rent & Utilities` improved from `0.0000` to `0.6667`
+- `Professional Services` improved slightly from `0.6154` to `0.6250`
+- `COGS` declined from `0.5000` to `0.4000`
+
+So the current signal is useful but mixed: synthetic gapfill appears to help certain undercovered classes, but it is not a blanket win across every weak category.
+
 ## Optional LLM Diversification
 
 Default recommendation: leave `--use-llm` off at first.

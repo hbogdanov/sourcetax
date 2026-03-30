@@ -134,6 +134,21 @@ Full workflow and exact commands:
 
 - `docs/synthetic_data_workflow.md`
 
+Experimental mixed-training ablations:
+
+```bash
+python tools/training/experimental_mixed_aux_train.py --synthetic-ratio 0.20
+python tools/training/experimental_mixed_aux_train.py --synthetic-ratio 0.35
+```
+
+Current result on the locked gold holdout:
+
+- gold-only ML macro-F1: `0.5777`
+- gold + synthetic at `20%`: `0.6179`
+- gold + synthetic at `35%`: `0.6119`
+
+Current recommendation: keep `20%` as the experimental default if you mix synthetic rows at all. It improved the locked gold-holdout macro-F1 more than `35%`, while preserving the same gold-only evaluation anchor.
+
 ## What SourceTax Does
 
 - Normalizes raw transactions into a canonical schema.
