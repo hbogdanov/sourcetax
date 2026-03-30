@@ -256,18 +256,81 @@ def _make_negative_case(
     return bank_row, mini
 
 
+def _build_negative_rows(
+    *,
+    positive_info: Sequence[Dict[str, Any]],
+    all_merchants: Sequence[str],
+    rng: random.Random,
+    exact_negative_pairs: Optional[int] = None,
+    min_neg_per_10: int = 2,
+    max_neg_per_10: int = 4,
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    bank_rows: List[Dict[str, Any]] = []
+    mini_rows: List[Dict[str, Any]] = []
+    neg_counter = 0
+
+    if exact_negative_pairs is not None:
+        if exact_negative_pairs <= 0 or not positive_info:
+            return bank_rows, mini_rows
+        for _ in range(int(exact_negative_pairs)):
+            neg_counter += 1
+            pos = rng.choice(list(positive_info))
+            bank_row, mini = _make_negative_case(
+                from_positive=pos,
+                all_merchants=all_merchants,
+                neg_idx=neg_counter,
+                rng=rng,
+            )
+            bank_rows.append(bank_row)
+            mini_rows.append(mini)
+        return bank_rows, mini_rows
+
+    for i in range(0, len(positive_info), 10):
+        block = list(positive_info[i : i + 10])
+        if not block:
+            continue
+        n_neg = rng.randint(min_neg_per_10, max_neg_per_10)
+        for _ in range(n_neg):
+            neg_counter += 1
+            pos = rng.choice(block)
+            bank_row, mini = _make_negative_case(
+                from_positive=pos,
+                all_merchants=all_merchants,
+                neg_idx=neg_counter,
+                rng=rng,
+            )
+            bank_rows.append(bank_row)
+            mini_rows.append(mini)
+    return bank_rows, mini_rows
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--staging-db", default="data/interim/staging.db")
-    parser.add_argument("--pair-count", type=int, default=50, help="Number of positive matched pairs.")
+    parser.add_argument(
+        "--pair-count",
+        "--positive-pairs",
+        dest="pair_count",
+        type=int,
+        default=50,
+        help="Number of positive matched pairs.",
+    )
     parser.add_argument(
         "--mini-out",
+        "--out-gold",
+        dest="mini_out",
         default="data/gold/matching_gold_mini_set.jsonl",
         help="Output JSONL path for pair labels (positive + negatives).",
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--min-neg-per-10", type=int, default=2)
     parser.add_argument("--max-neg-per-10", type=int, default=4)
+    parser.add_argument(
+        "--negative-pairs",
+        type=int,
+        default=-1,
+        help="Exact number of negative bank rows to generate. Default uses block-based sampling.",
+    )
     parser.add_argument("--batch-size", type=int, default=500)
     args = parser.parse_args()
 
@@ -308,21 +371,17 @@ def main() -> int:
             }
         )
 
-    neg_counter = 0
-    for i in range(0, len(positive_info), 10):
-        block = positive_info[i : i + 10]
-        n_neg = rng.randint(args.min_neg_per_10, args.max_neg_per_10)
-        for _ in range(n_neg):
-            neg_counter += 1
-            pos = rng.choice(block)
-            bank_row, mini = _make_negative_case(
-                from_positive=pos,
-                all_merchants=all_merchants,
-                neg_idx=neg_counter,
-                rng=rng,
-            )
-            synthetic_banks.append(bank_row)
-            mini_rows.append(mini)
+    exact_negative_pairs = args.negative_pairs if int(args.negative_pairs) >= 0 else None
+    negative_bank_rows, negative_mini_rows = _build_negative_rows(
+        positive_info=positive_info,
+        all_merchants=all_merchants,
+        rng=rng,
+        exact_negative_pairs=exact_negative_pairs,
+        min_neg_per_10=int(args.min_neg_per_10),
+        max_neg_per_10=int(args.max_neg_per_10),
+    )
+    synthetic_banks.extend(negative_bank_rows)
+    mini_rows.extend(negative_mini_rows)
 
     inserted_receipts = staging.insert_staging_receipts(
         synthetic_receipts, path=staging_db, batch_size=args.batch_size

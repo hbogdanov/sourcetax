@@ -12,9 +12,12 @@ from typing import Dict, List, Tuple
 WEAK_CATEGORIES = [
     "COGS",
     "Payroll & Contractors",
-    "Insurance",
     "Taxes & Licenses",
+    "Insurance",
     "Professional Services",
+    "Financial Fees",
+    "Vehicle Expenses",
+    "Rent & Utilities",
 ]
 
 

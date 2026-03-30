@@ -143,3 +143,7 @@ def test_staging_create_insert_and_count(tmp_path: Path):
     counts = staging.get_staging_counts(path=db_path)
     assert counts["staging_transactions"] == 1
     assert counts["staging_receipts"] == 1
+
+
+def test_default_staging_db_path_is_interim():
+    assert staging.DEFAULT_STAGING_DB == Path("data") / "interim" / "staging.db"

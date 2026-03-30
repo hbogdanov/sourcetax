@@ -1,6 +1,6 @@
 import random
 
-from tools.generate_pairs import _make_positive_pair, _sample_offset_days
+from tools.generate_pairs import _build_negative_rows, _make_positive_pair, _sample_offset_days
 
 
 def test_offset_sampler_returns_only_expected_values():
@@ -32,4 +32,27 @@ def test_make_positive_pair_has_group_id_and_linked_ids():
     assert receipt_row["source_record_id"] == "pair_00001_r"
     assert bank_row["source_record_id"] == "pair_00001_b"
     assert bank_row["amount"] < 0
+
+
+def test_build_negative_rows_respects_exact_negative_count():
+    rng = random.Random(42)
+    positive_info = [
+        {
+            "group_id": "pair_00001",
+            "receipt_source_record_id": "pair_00001_r",
+            "receipt_date": "2026-03-02",
+            "receipt_total": 31.0,
+            "receipt_merchant": "ABC CAFE",
+            "currency": "USD",
+        }
+    ]
+    banks, mini = _build_negative_rows(
+        positive_info=positive_info,
+        all_merchants=["ABC CAFE", "XYZ DELI"],
+        rng=rng,
+        exact_negative_pairs=3,
+    )
+    assert len(banks) == 3
+    assert len(mini) == 3
+    assert all(row["should_match"] is False for row in mini)
 

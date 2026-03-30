@@ -110,6 +110,30 @@ Pipeline exports:
 python tools/data_pipeline/phase4_run.py
 ```
 
+## Synthetic Data
+
+SourceTax supports two separate synthetic workflows:
+
+- `tools/generate_synthetic_gapfill.py` for categorization, mapping, and weak-category coverage
+- `tools/generate_pairs.py` for receipt-to-bank matching realism
+
+Standard staging path:
+
+```text
+data/interim/staging.db
+```
+
+Synthetic data policy:
+
+- synthetic rows go to staging, never `data/gold`
+- final reported categorization metrics stay gold-only
+- any gold+synthetic experiment must preserve a gold-only holdout
+- mixed experiments must report synthetic proportion and per-category metrics
+
+Full workflow and exact commands:
+
+- `docs/synthetic_data_workflow.md`
+
 ## What SourceTax Does
 
 - Normalizes raw transactions into a canonical schema.

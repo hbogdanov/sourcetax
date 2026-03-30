@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
-DEFAULT_STAGING_DB = Path("data") / "staging.db"
+DEFAULT_STAGING_DB = Path("data") / "interim" / "staging.db"
 
 
 def _json_dumps(value: Any, default: Any) -> str:
