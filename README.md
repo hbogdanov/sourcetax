@@ -4,7 +4,7 @@ SourceTax turns messy transaction exports into categorized, accounting-ready rec
 
 It takes raw bank or POS data, normalizes merchants into a canonical schema, classifies each transaction, and exports enriched transactions, GL lines, and audit-ready logs.
 
-## Killer Demo
+## Demo
 
 Run one command:
 
