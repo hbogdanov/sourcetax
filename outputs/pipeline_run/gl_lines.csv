@@ -1,0 +1,7 @@
+transaction_id,posting_date,account,debit,credit,memo,entity,source,evidence,label_source,pipeline_version,run_id
+bank:bank_sample:1,2026-02-19,Other Expense,125.00,,ACME SUPPLY CO,ACME SUPPLY CO,bank,"{""matched_transaction_id"": null, ""match_score"": null, ""evidence_keys"": [""[\""bank_transaction\""]""]}",ml,product_demo_v1,pipeline_20260427T193002Z
+bank:bank_sample:1,2026-02-19,Bank Clearing,,125.00,ACME SUPPLY CO,ACME SUPPLY CO,bank,"{""matched_transaction_id"": null, ""match_score"": null, ""evidence_keys"": [""[\""bank_transaction\""]""]}",ml,product_demo_v1,pipeline_20260427T193002Z
+bank:bank_sample:2,2026-02-20,Bank Clearing,4.50,,COFFEE SHOP,COFFEE SHOP,bank,"{""matched_transaction_id"": null, ""match_score"": null, ""evidence_keys"": [""[\""bank_transaction\""]""]}",ml,product_demo_v1,pipeline_20260427T193002Z
+bank:bank_sample:2,2026-02-20,Income,,4.50,COFFEE SHOP,COFFEE SHOP,bank,"{""matched_transaction_id"": null, ""match_score"": null, ""evidence_keys"": [""[\""bank_transaction\""]""]}",ml,product_demo_v1,pipeline_20260427T193002Z
+bank:bank_sample:3,2026-02-21,Other Expense,500.00,,ACH PAYMENT,ACH PAYMENT,bank,"{""matched_transaction_id"": null, ""match_score"": null, ""evidence_keys"": [""[\""bank_transaction\""]""]}",ml,product_demo_v1,pipeline_20260427T193002Z
+bank:bank_sample:3,2026-02-21,Bank Clearing,,500.00,ACH PAYMENT,ACH PAYMENT,bank,"{""matched_transaction_id"": null, ""match_score"": null, ""evidence_keys"": [""[\""bank_transaction\""]""]}",ml,product_demo_v1,pipeline_20260427T193002Z

@@ -30,6 +30,25 @@ reports/
 tmp/
 artifacts/
 
+!artifacts/
+artifacts/*
+!artifacts/final_results_summary.md
+
+!outputs/
+outputs/*
+!outputs/pipeline_run/
+!outputs/showcase_demo/
+outputs/pipeline_run/*
+outputs/showcase_demo/*
+!outputs/pipeline_run/accounting_transactions_enriched.csv
+!outputs/pipeline_run/gl_lines.csv
+!outputs/pipeline_run/audit_trail.jsonl
+!outputs/pipeline_run/quickbooks_import.csv
+!outputs/showcase_demo/accounting_transactions_enriched.csv
+!outputs/showcase_demo/gl_lines.csv
+!outputs/showcase_demo/audit_trail.jsonl
+!outputs/showcase_demo/quickbooks_import.csv
+
 # Large dataset artifacts (generated, not source)
 *.parquet
 *.pickle

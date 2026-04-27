@@ -1,0 +1,4 @@
+transaction_id,date,posting_date,merchant_raw,merchant_normalized,amount,currency,direction,predicted_category,final_category,effective_category,confidence,label_source,receipt_id,matched_transaction_id,match_score,evidence_pointers,source,source_record_id,pipeline_version,run_id
+bank:bank_sample:1,2026-02-19,2026-02-19,ACME SUPPLY CO,acme supply co,125.0,USD,expense,Other Expense,,Other Expense,0.3,ml,,,,"[""[\""bank_transaction\""]""]",bank,bank:bank_sample:1,product_demo_v1,pipeline_20260427T193002Z
+bank:bank_sample:2,2026-02-20,2026-02-20,COFFEE SHOP,coffee shop,4.5,USD,income,Financial Fees,,Financial Fees,0.7,ml,,,,"[""[\""bank_transaction\""]""]",bank,bank:bank_sample:2,product_demo_v1,pipeline_20260427T193002Z
+bank:bank_sample:3,2026-02-21,2026-02-21,ACH PAYMENT,ach payment,500.0,USD,expense,Other Expense,,Other Expense,0.3,ml,,,,"[""[\""bank_transaction\""]""]",bank,bank:bank_sample:3,product_demo_v1,pipeline_20260427T193002Z
