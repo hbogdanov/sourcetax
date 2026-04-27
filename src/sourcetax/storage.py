@@ -71,3 +71,10 @@ def insert_record(rec: Dict[str, Any], path: Path = DB_PATH):
     )
     conn.commit()
     conn.close()
+
+
+def reset_db(path: Path = DB_PATH):
+    path = Path(path)
+    if path.exists():
+        path.unlink()
+    ensure_db(path)

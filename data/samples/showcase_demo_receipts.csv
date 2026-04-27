@@ -1,0 +1,30 @@
+merchant,date,total,direction,receipt_file,confidence
+STARBUCKS,2026-02-01,12.86,expense,receipt_starbucks_001.jpg,0.72
+HOME DEPOT,2026-02-02,188.40,expense,receipt_home_depot_001.jpg,0.74
+ADOBE,2026-02-03,54.99,expense,receipt_adobe_001.jpg,0.70
+OFFICE DEPOT,2026-02-06,86.73,expense,receipt_office_depot_001.jpg,0.73
+FEDEX OFFICE,2026-02-08,67.55,expense,receipt_fedex_office_001.jpg,0.72
+WHOLE FOODS MARKET,2026-02-10,96.17,expense,receipt_whole_foods_001.jpg,0.71
+AMAZON BUSINESS,2026-02-12,123.44,expense,receipt_amazon_business_001.jpg,0.69
+COSTCO WHOLESALE,2026-02-14,214.67,expense,receipt_costco_001.jpg,0.70
+LOWES HOME CENTERS,2026-02-16,276.15,expense,receipt_lowes_001.jpg,0.70
+SWEETGREEN,2026-02-19,28.44,expense,receipt_sweetgreen_001.jpg,0.72
+STAPLES,2026-02-24,58.42,expense,receipt_staples_001.jpg,0.71
+MARRIOTT ATLANTA MIDTOWN,2026-02-26,486.33,expense,receipt_marriott_001.jpg,0.73
+SWEET HUT CATERING,2026-03-04,142.50,expense,receipt_sweet_hut_001.jpg,0.70
+WW GRAINGER 912,2026-03-07,312.77,expense,receipt_grainger_001.jpg,0.72
+MAURICE ELECTRICAL SUP,2026-03-07,529.59,expense,receipt_maurice_electrical_001.jpg,0.71
+STANDARD OFFICE SUPPLY,2026-03-08,174.26,expense,receipt_standard_office_001.jpg,0.71
+NAPA AUTO PARTS,2026-03-09,83.16,expense,receipt_napa_001.jpg,0.72
+JIFFY LUBE,2026-03-09,74.99,expense,receipt_jiffy_lube_001.jpg,0.73
+BP,2026-03-10,61.42,expense,receipt_bp_001.jpg,0.70
+THOMSON WEST*TCD,2026-03-11,249.00,expense,receipt_thomson_001.jpg,0.69
+DS WATERS,2026-03-12,46.55,expense,receipt_ds_waters_001.jpg,0.70
+VERIZON WRLS 0227401,2026-03-13,134.94,expense,receipt_verizon_001.jpg,0.72
+J E S ELECTRIC SERVICE,2026-03-15,418.60,expense,receipt_jes_electric_001.jpg,0.70
+TOUCAN BUSINESS FORMS,2026-03-17,311.20,expense,receipt_toucan_001.jpg,0.68
+GSA/FAS,2026-03-18,125.00,expense,receipt_gsa_001.jpg,0.67
+TRAVELERS COMMERCIAL,2026-03-18,142.18,expense,receipt_travelers_001.jpg,0.71
+LOCAL PLUMBING CO,2026-03-18,226.14,expense,receipt_plumbing_unmatched.jpg,0.66
+FARMERS MARKET,2026-03-19,39.84,expense,receipt_farmers_market_unmatched.jpg,0.67
+GROCERY MART,2026-02-21,11.88,expense,receipt_grocery_mart_unmatched.jpg,0.68

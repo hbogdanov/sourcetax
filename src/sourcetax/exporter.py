@@ -74,6 +74,30 @@ def _effective_category(record: Dict[str, Any]) -> str:
     return "Other Expense"
 
 
+def _evidence_summary(record: Dict[str, Any]) -> str:
+    evidence_keys = [str(x) for x in (record.get("evidence_keys") or []) if str(x).strip()]
+    parts: List[str] = []
+    if record.get("matched_transaction_id"):
+        parts.append(f"matched:{record.get('matched_transaction_id')}")
+    if record.get("match_score") is not None:
+        try:
+            parts.append(f"match_score:{float(record.get('match_score')):.0%}")
+        except Exception:
+            pass
+    if evidence_keys:
+        parts.append("evidence:" + ", ".join(evidence_keys[:4]))
+        if len(evidence_keys) > 4:
+            parts.append(f"+{len(evidence_keys) - 4} more")
+    raw_payload = record.get("raw_payload") or {}
+    if isinstance(raw_payload, dict):
+        rule_reason = raw_payload.get("rule_reason")
+        if isinstance(rule_reason, list) and rule_reason:
+            parts.append("reason:" + str(rule_reason[0]))
+        elif raw_payload.get("ml_prediction"):
+            parts.append("reason:ml_prediction")
+    return " | ".join(parts)
+
+
 def _to_record_dict(row: sqlite3.Row) -> Dict[str, Any]:
     d = dict(row)
     evidence = _safe_json_loads(d.get("evidence_keys"), [])
@@ -177,7 +201,6 @@ def export_transactions_enriched_csv(
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
         writer.writeheader()
         for rec in records:
-            evidence_keys = rec.get("evidence_keys") or []
             source = rec.get("source") or ""
             receipt_id = rec["id"] if source == "receipt" else ""
             writer.writerow(
@@ -198,7 +221,7 @@ def export_transactions_enriched_csv(
                     "receipt_id": receipt_id,
                     "matched_transaction_id": rec.get("matched_transaction_id") or "",
                     "match_score": rec.get("match_score") if rec.get("match_score") is not None else "",
-                    "evidence_pointers": json.dumps(evidence_keys, ensure_ascii=False),
+                    "evidence_pointers": _evidence_summary(rec),
                     "source": source,
                     "source_record_id": rec.get("source_record_id") or "",
                     "pipeline_version": pipeline_version,
@@ -265,7 +288,7 @@ def export_gl_lines_csv(
                 "memo": rec.get("merchant_raw") or "",
                 "entity": rec.get("merchant_raw") or "",
                 "source": rec.get("source") or "",
-                "evidence": json.dumps(evidence, ensure_ascii=False),
+                "evidence": _evidence_summary({**rec, "evidence_keys": evidence["evidence_keys"]}),
                 "label_source": _infer_label_source(rec),
                 "pipeline_version": pipeline_version,
                 "run_id": run_id,

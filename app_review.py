@@ -15,6 +15,7 @@ import json
 import sqlite3
 import subprocess
 import sys
+import shutil
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -26,6 +27,15 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from sourcetax import categorization, exporter, ingest, matching, reconciliation, storage, taxonomy
+from sourcetax.review_logic import (
+    HIGH_CONFIDENCE_THRESHOLD,
+    LOW_CONFIDENCE_THRESHOLD,
+    build_issue_flags,
+    confidence_value,
+    has_missing_required_fields,
+    merchant_ambiguity_reason,
+    primary_issue_type,
+)
 
 
 DB_PATH = "data/store.db"
@@ -98,9 +108,8 @@ def fmt_pct(value: Any) -> str:
 
 
 def confidence_level(value: Any) -> str:
-    try:
-        v = float(value)
-    except Exception:
+    v = confidence_value(value, default=-1.0)
+    if v < 0.0:
         return "unknown"
     if v >= 0.85:
         return "high"
@@ -139,6 +148,13 @@ def get_conn() -> sqlite3.Connection:
     return conn
 
 
+def reset_workspace() -> None:
+    storage.reset_db(Path(DB_PATH))
+    if UPLOAD_DIR.exists():
+        shutil.rmtree(UPLOAD_DIR, ignore_errors=True)
+    st.session_state.pop("ingest_results", None)
+
+
 def query_rows(sql: str, params: tuple = ()) -> List[Dict[str, Any]]:
     conn = get_conn()
     cur = conn.cursor()
@@ -146,6 +162,16 @@ def query_rows(sql: str, params: tuple = ()) -> List[Dict[str, Any]]:
     rows = [dict(r) for r in cur.fetchall()]
     conn.close()
     return rows
+
+
+def record_lookup_parts(record_ref: str) -> tuple[str, Any]:
+    text = str(record_ref or "").strip()
+    if text.startswith("rowid:"):
+        try:
+            return "rowid", int(text.split(":", 1)[1])
+        except Exception:
+            return "id", text
+    return "id", text
 
 
 def parse_record_fields(record: Dict[str, Any]) -> Dict[str, Any]:
@@ -157,7 +183,11 @@ def parse_record_fields(record: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def fetch_record(record_id: str) -> Optional[Dict[str, Any]]:
-    rows = query_rows("SELECT * FROM canonical_records WHERE id = ?", (record_id,))
+    key, value = record_lookup_parts(record_id)
+    if key == "rowid":
+        rows = query_rows("SELECT rowid, * FROM canonical_records WHERE rowid = ?", (value,))
+    else:
+        rows = query_rows("SELECT rowid, * FROM canonical_records WHERE id = ?", (value,))
     return parse_record_fields(rows[0]) if rows else None
 
 
@@ -253,39 +283,47 @@ def build_review_queue_df(all_df: pd.DataFrame) -> pd.DataFrame:
     conflicts = {r["id"]: r for r in reconciliation.conflicts_queue(DB_PATH)}
     unmatched_receipts = {r["id"]: r for r in reconciliation.unmatched_receipts(DB_PATH)}
     unmatched_bank = {r["id"]: r for r in reconciliation.unmatched_bank_transactions(DB_PATH)}
+    has_receipts = bool((all_df["source"].fillna("").astype(str).str.lower() == "receipt").any())
     rows = []
     for _, row in all_df.iterrows():
         rid = row.get("id")
         if not rid:
             continue
-        if rid not in low_conf and rid not in conflicts and rid not in unmatched_receipts and rid not in unmatched_bank:
+        parsed = parse_record_fields(row.to_dict())
+        issue_flags = build_issue_flags(
+            parsed,
+            has_receipts=has_receipts,
+            is_conflict=rid in conflicts,
+            low_conf_threshold=LOW_CONFIDENCE_THRESHOLD,
+        )
+        if rid in unmatched_receipts:
+            issue_flags.setdefault("unmatched_receipt", "receipt not matched to a transaction")
+        if has_receipts and rid in unmatched_bank:
+            issue_flags.setdefault("unmatched_bank_txn", "bank/POS transaction not linked to a receipt")
+        if not issue_flags:
             continue
-        raw_payload = row.get("raw_payload") if isinstance(row.get("raw_payload"), dict) else {}
-        issue = "low_confidence"
-        if rid in conflicts:
-            issue = "conflict"
-        elif rid in unmatched_receipts:
-            issue = "unmatched_receipt"
-        elif rid in unmatched_bank:
-            issue = "unmatched_bank_txn"
+        raw_payload = parsed.get("raw_payload") if isinstance(parsed.get("raw_payload"), dict) else {}
+        issue = primary_issue_type(issue_flags) or "low_confidence"
         rows.append(
             {
                 "id": rid,
-                "transaction_date": row.get("transaction_date"),
-                "merchant_raw": row.get("merchant_raw"),
-                "merchant_norm": row.get("merchant_norm"),
-                "amount": row.get("amount"),
-                "source": row.get("source"),
-                "predicted_category": row.get("category_pred"),
-                "final_category": row.get("category_final"),
-                "effective_category": effective_category_for_row(row),
-                "confidence": row.get("confidence"),
+                "transaction_date": parsed.get("transaction_date"),
+                "merchant_raw": parsed.get("merchant_raw"),
+                "merchant_norm": parsed.get("merchant_norm"),
+                "amount": parsed.get("amount"),
+                "source": parsed.get("source"),
+                "predicted_category": parsed.get("category_pred"),
+                "final_category": parsed.get("category_final"),
+                "effective_category": effective_category_for_row(parsed),
+                "confidence": confidence_value(parsed.get("confidence")),
                 "issue_type": issue,
+                "issue_types": ", ".join(issue_flags.keys()),
+                "issue_notes": " | ".join(issue_flags.values()),
                 "rules_pred": conflicts.get(rid, {}).get("rules_pred"),
                 "ml_pred": conflicts.get(rid, {}).get("ml_pred")
                 or (raw_payload.get("ml_prediction") if isinstance(raw_payload, dict) else None),
                 "label_source": label_source_for_record(
-                    {"category_final": row.get("category_final"), "raw_payload": raw_payload}
+                    {"category_final": parsed.get("category_final"), "raw_payload": raw_payload}
                 ),
             }
         )
@@ -298,24 +336,58 @@ def build_review_queue_df(all_df: pd.DataFrame) -> pd.DataFrame:
 def build_review_grid_df(all_df: pd.DataFrame) -> pd.DataFrame:
     if all_df.empty:
         return pd.DataFrame()
+    has_receipts = bool((all_df["source"].fillna("").astype(str).str.lower() == "receipt").any())
+    conflict_ids = {r["id"] for r in reconciliation.conflicts_queue(DB_PATH)}
     rows = []
     for _, row in all_df.iterrows():
         rec = parse_record_fields(row.to_dict())
+        ui_id = rec.get("id") or f"rowid:{rec.get('rowid')}"
+        confidence_num = confidence_value(rec.get("confidence"))
+        raw_payload = rec.get("raw_payload") if isinstance(rec.get("raw_payload"), dict) else {}
+        rule_conf = confidence_value(raw_payload.get("rule_confidence"))
+        ml_conf_raw = raw_payload.get("ml_confidence")
+        ml_conf = confidence_value(ml_conf_raw) if ml_conf_raw is not None else None
+        saved_category = taxonomy.normalize_category_name(rec.get("category_final")) or ""
+        predicted_category = taxonomy.normalize_category_name(rec.get("category_pred")) or "Uncategorized"
+        selected_category = saved_category or predicted_category
+        if saved_category:
+            confidence_source = "human"
+        elif raw_payload.get("rule_category") and taxonomy.normalize_category_name(raw_payload.get("rule_category")) == predicted_category:
+            confidence_source = "rule"
+        elif raw_payload.get("ml_prediction") and taxonomy.normalize_category_name(raw_payload.get("ml_prediction")) == predicted_category:
+            confidence_source = "ml"
+        else:
+            confidence_source = "pipeline"
+        issue_flags = build_issue_flags(
+            rec,
+            has_receipts=has_receipts,
+            is_conflict=str(rec.get("id") or "") in conflict_ids,
+            low_conf_threshold=LOW_CONFIDENCE_THRESHOLD,
+        )
         rows.append(
             {
-                "id": rec.get("id"),
+                "id": ui_id,
                 "date": rec.get("transaction_date"),
                 "merchant_raw": rec.get("merchant_raw"),
                 "merchant_normalized": rec.get("merchant_norm"),
                 "amount": rec.get("amount"),
                 "source": rec.get("source"),
-                "predicted_category": taxonomy.normalize_category_name(rec.get("category_pred")) or "Uncategorized",
-                "confidence": rec.get("confidence"),
+                "predicted_category": predicted_category,
+                "saved_category": saved_category,
+                "selected_category": selected_category,
+                "effective_category": effective_category_for_row(rec),
+                "confidence": confidence_num,
+                "confidence_band": confidence_level(confidence_num).title(),
+                "confidence_source": confidence_source,
+                "rule_confidence": rule_conf,
+                "ml_confidence": ml_conf,
                 "reason_source": reason_source_for_row(rec),
-                "final_category": effective_category_for_row(rec),
+                "approval_status": "Approved" if saved_category else "Pending",
                 "approved": bool(rec.get("category_final")),
-                "unknown_merchant": not bool(str(rec.get("merchant_norm") or "").strip()),
-                "missing_fields": any(not rec.get(key) for key in ("transaction_date", "merchant_raw", "amount")),
+                "unknown_merchant": bool(merchant_ambiguity_reason(rec)),
+                "merchant_issue": merchant_ambiguity_reason(rec),
+                "missing_fields": has_missing_required_fields(rec),
+                "issue_summary": " | ".join(issue_flags.values()),
             }
         )
     df = pd.DataFrame(rows)
@@ -362,6 +434,7 @@ def process_uploaded_files(uploaded_files: List[Any]) -> List[Dict[str, Any]]:
     results: List[Dict[str, Any]] = []
     for uploaded_file in uploaded_files:
         raw_bytes = uploaded_file.getvalue()
+        suffix = Path(uploaded_file.name).suffix.lower()
         row = {
             "file_name": uploaded_file.name,
             "source_detected": "",
@@ -375,7 +448,7 @@ def process_uploaded_files(uploaded_files: List[Any]) -> List[Dict[str, Any]]:
             source = detect_uploaded_source(uploaded_file.name, raw_bytes)
             row["source_detected"] = source
             saved_path = save_uploaded_file(uploaded_file)
-            if source == "receipt":
+            if source == "receipt" and suffix in {".png", ".jpg", ".jpeg", ".pdf"}:
                 ok = ingest.ingest_receipt_file(saved_path, db_path=DB_PATH)
                 row["rows_found"] = 1
                 row["parsed_ok"] = 1 if ok else 0
@@ -405,13 +478,34 @@ def run_processing_pipeline() -> Dict[str, int]:
 
 def save_category_override(record_id: str, category: str, notes: str = "Saved from review grid") -> None:
     to_save = "Other Expense" if category == "Uncategorized" else category
-    categorization.save_category_override(
-        record_id,
-        to_save,
-        DB_PATH,
-        label_confidence="medium",
-        label_notes=notes,
+    key, value = record_lookup_parts(record_id)
+    if key == "id":
+        categorization.save_category_override(
+            str(value),
+            to_save,
+            DB_PATH,
+            label_confidence="medium",
+            label_notes=notes,
+        )
+        return
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT raw_payload FROM canonical_records WHERE rowid = ?", (value,))
+    row = cur.fetchone()
+    raw_payload = safe_json_loads(row["raw_payload"] if row else {}, {})
+    if not isinstance(raw_payload, dict):
+        raw_payload = {}
+    raw_payload["label_source"] = "human"
+    raw_payload["label_confidence"] = "medium"
+    raw_payload["label_notes"] = notes
+    raw_payload["labeled_at_utc"] = datetime.utcnow().isoformat() + "Z"
+    cur.execute(
+        "UPDATE canonical_records SET category_final = ?, raw_payload = ? WHERE rowid = ?",
+        (to_save, json.dumps(raw_payload, ensure_ascii=False), value),
     )
+    conn.commit()
+    conn.close()
 
 
 def render_header() -> None:
@@ -481,7 +575,7 @@ def render_ingest_screen(all_df: pd.DataFrame) -> None:
             type=["csv", "png", "jpg", "jpeg", "pdf"],
             accept_multiple_files=True,
         )
-        c1, c2 = st.columns(2)
+        c1, c2, c3 = st.columns(3)
         with c1:
             if st.button("Ingest uploaded files", use_container_width=True, disabled=not uploaded_files):
                 results = process_uploaded_files(list(uploaded_files or []))
@@ -494,6 +588,11 @@ def render_ingest_screen(all_df: pd.DataFrame) -> None:
                 st.success(
                     f"Matched {result['matched_receipts']} receipts and categorized {result['categorized_records']} records."
                 )
+                st.rerun()
+        with c3:
+            if st.button("Reset workspace", use_container_width=True):
+                reset_workspace()
+                st.success("Cleared the review workspace. You can now upload a fresh batch.")
                 st.rerun()
 
     with st.container(border=True):
@@ -518,16 +617,15 @@ def render_review_grid(all_df: pd.DataFrame) -> None:
     with st.container(border=True):
         f1, f2, f3, f4, f5 = st.columns([1.0, 1.0, 1.0, 1.0, 1.8])
         low_conf_only = f1.checkbox("Low confidence only")
-        unknown_only = f2.checkbox("Unknown merchant")
+        unknown_only = f2.checkbox("Ambiguous merchant")
         unapproved_only = f3.checkbox("Unapproved only")
         source_options = sorted(grid_df["source"].dropna().unique().tolist())
         selected_sources = f4.multiselect("Source", source_options, default=source_options)
         search_term = f5.text_input("Search merchant", placeholder="Starbucks, Uber, Amazon...")
 
     filtered = grid_df.copy()
-    filtered["confidence_num"] = pd.to_numeric(filtered["confidence"], errors="coerce")
     if low_conf_only:
-        filtered = filtered[filtered["confidence_num"].fillna(0.0) < 0.70]
+        filtered = filtered[filtered["confidence"] < LOW_CONFIDENCE_THRESHOLD]
     if unknown_only:
         filtered = filtered[filtered["unknown_merchant"]]
     if unapproved_only:
@@ -547,11 +645,18 @@ def render_review_grid(all_df: pd.DataFrame) -> None:
 
     action_cols = st.columns([1.2, 1.2, 2.4])
     with action_cols[0]:
-        if st.button("Bulk approve high-confidence", use_container_width=True):
-            candidates = filtered[(filtered["confidence_num"].fillna(0.0) >= 0.85) & (~filtered["approved"])]
+        candidates = filtered[(filtered["confidence"] >= HIGH_CONFIDENCE_THRESHOLD) & (~filtered["approved"])]
+        if st.button(
+            f"Bulk approve high-confidence ({len(candidates)})",
+            use_container_width=True,
+            disabled=candidates.empty,
+        ):
             saved = 0
             for _, row in candidates.iterrows():
-                save_category_override(str(row["id"]), str(row["predicted_category"]), notes="Bulk-approved from review grid")
+                predicted_category = str(row["predicted_category"] or "").strip()
+                if predicted_category in {"", "Uncategorized"}:
+                    continue
+                save_category_override(str(row["id"]), predicted_category, notes="Bulk-approved from review grid")
                 saved += 1
             st.success(f"Approved {saved} high-confidence rows.")
             st.rerun()
@@ -570,13 +675,24 @@ def render_review_grid(all_df: pd.DataFrame) -> None:
             "merchant_normalized",
             "amount",
             "predicted_category",
+            "saved_category",
+            "effective_category",
             "confidence",
+            "confidence_band",
+            "confidence_source",
+            "rule_confidence",
+            "ml_confidence",
             "reason_source",
-            "final_category",
+            "approval_status",
+            "issue_summary",
+            "selected_category",
         ]
     ].copy()
+    editor_df["confidence_pct"] = (pd.to_numeric(editor_df["confidence"], errors="coerce").fillna(0.0) * 100).round().astype(int)
+    editor_df["rule_confidence_pct"] = (pd.to_numeric(editor_df["rule_confidence"], errors="coerce").fillna(0.0) * 100).round().astype(int)
+    editor_df["ml_confidence_pct"] = (pd.to_numeric(editor_df["ml_confidence"], errors="coerce").fillna(0.0) * 100).round().astype(int)
     editor_df["approve"] = False
-    original_final_categories = dict(zip(editor_df["id"].astype(str), editor_df["final_category"].astype(str)))
+    original_selected_categories = dict(zip(editor_df["id"].astype(str), editor_df["selected_category"].astype(str)))
 
     edited = st.data_editor(
         editor_df,
@@ -587,28 +703,65 @@ def render_review_grid(all_df: pd.DataFrame) -> None:
             "id": st.column_config.TextColumn("ID"),
             "date": st.column_config.TextColumn("Date"),
             "amount": st.column_config.NumberColumn("Amount", format="$%.2f"),
-            "confidence": st.column_config.ProgressColumn(
-                "Confidence",
-                min_value=0.0,
-                max_value=1.0,
-                format="%.0f%%",
+            "confidence_pct": st.column_config.ProgressColumn(
+                "Pipeline Conf",
+                min_value=0,
+                max_value=100,
+                format="%d%%",
             ),
-            "final_category": st.column_config.SelectboxColumn(
-                "Final Category",
+            "rule_confidence_pct": st.column_config.ProgressColumn(
+                "Rule Conf",
+                min_value=0,
+                max_value=100,
+                format="%d%%",
+            ),
+            "ml_confidence_pct": st.column_config.ProgressColumn(
+                "ML Conf",
+                min_value=0,
+                max_value=100,
+                format="%d%%",
+            ),
+            "confidence_band": st.column_config.TextColumn("Band"),
+            "saved_category": st.column_config.TextColumn("Saved Category"),
+            "effective_category": st.column_config.TextColumn("Effective Category"),
+            "confidence_source": st.column_config.TextColumn("Conf Source"),
+            "approval_status": st.column_config.TextColumn("Status"),
+            "selected_category": st.column_config.SelectboxColumn(
+                "Category To Save",
                 options=category_options(),
                 required=True,
             ),
             "approve": st.column_config.CheckboxColumn("Approve"),
         },
         key="review_grid_editor",
+        column_order=[
+            "id",
+            "date",
+            "merchant_raw",
+            "merchant_normalized",
+            "amount",
+            "predicted_category",
+            "saved_category",
+            "effective_category",
+            "confidence_pct",
+            "rule_confidence_pct",
+            "ml_confidence_pct",
+            "confidence_band",
+            "confidence_source",
+            "reason_source",
+            "approval_status",
+            "issue_summary",
+            "selected_category",
+            "approve",
+        ],
     )
 
     if st.button("Save grid changes", use_container_width=True):
         saved = 0
         for _, row in edited.iterrows():
-            changed = str(row.get("final_category")) != original_final_categories.get(str(row.get("id")), "")
+            changed = str(row.get("selected_category")) != original_selected_categories.get(str(row.get("id")), "")
             if bool(row.get("approve")) or changed:
-                save_category_override(str(row["id"]), str(row["final_category"]))
+                save_category_override(str(row["id"]), str(row["selected_category"]))
                 saved += 1
         st.success(f"Saved {saved} approval(s).")
         st.rerun()
@@ -636,10 +789,18 @@ def render_exceptions_screen(all_df: pd.DataFrame) -> None:
     queue_df = build_review_queue_df(all_df)
     grid_df = build_review_grid_df(all_df)
 
-    low_conf = queue_df[queue_df["issue_type"] == "low_confidence"].copy() if not queue_df.empty else pd.DataFrame()
-    conflicts = queue_df[queue_df["issue_type"] == "conflict"].copy() if not queue_df.empty else pd.DataFrame()
+    low_conf = (
+        queue_df[queue_df["issue_types"].fillna("").str.contains("low_confidence")].copy()
+        if not queue_df.empty
+        else pd.DataFrame()
+    )
+    conflicts = (
+        queue_df[queue_df["issue_types"].fillna("").str.contains("conflict")].copy()
+        if not queue_df.empty
+        else pd.DataFrame()
+    )
     unmatched_receipts = pd.DataFrame(reconciliation.unmatched_receipts(DB_PATH))
-    ambiguous_merchants = grid_df[grid_df["unknown_merchant"]].copy() if not grid_df.empty else pd.DataFrame()
+    ambiguous_merchants = grid_df[grid_df["merchant_issue"].fillna("").astype(str) != ""].copy() if not grid_df.empty else pd.DataFrame()
     missing_fields = grid_df[grid_df["missing_fields"]].copy() if not grid_df.empty else pd.DataFrame()
 
     stats = st.columns(5)
@@ -679,7 +840,7 @@ def render_exceptions_screen(all_df: pd.DataFrame) -> None:
             st.success("No ambiguous merchants.")
         else:
             st.dataframe(
-                ambiguous_merchants[["id", "date", "merchant_raw", "amount", "source"]],
+                ambiguous_merchants[["id", "date", "merchant_raw", "merchant_normalized", "amount", "source", "merchant_issue"]],
                 use_container_width=True,
                 hide_index=True,
             )
